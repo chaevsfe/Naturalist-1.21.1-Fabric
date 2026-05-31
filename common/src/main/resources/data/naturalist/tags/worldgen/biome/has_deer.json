@@ -7,7 +7,7 @@
       "required": false
     },
     {
-      "id": "#c:forest",
+      "id": "#c:is_forest",
       "required": false
     }
   ]

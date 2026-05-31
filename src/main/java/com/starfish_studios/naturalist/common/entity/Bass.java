@@ -44,7 +44,10 @@ public class Bass extends AbstractSchoolingFish implements NaturalistGeoEntity {
 
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.SALMON_AMBIENT;
+        // SALMON_AMBIENT is an empty sound event in 1.21.1 (registered, no audio bound),
+        // which makes the engine log "Unable to play empty soundEvent". Vanilla salmon have
+        // no ambient either — return null for silence and no warning. Hurt/death/flop kept.
+        return null;
     }
 
     @Override

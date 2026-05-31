@@ -13,15 +13,15 @@
       "required": false
     },
     {
-      "id": "#c:swamp",
+      "id": "#c:is_swamp",
       "required": false
     },
     {
-      "id": "#c:desert",
+      "id": "#c:is_desert",
       "required": false
     },
     {
-      "id": "#c:jungle",
+      "id": "#c:is_jungle",
       "required": false
     }
   ]

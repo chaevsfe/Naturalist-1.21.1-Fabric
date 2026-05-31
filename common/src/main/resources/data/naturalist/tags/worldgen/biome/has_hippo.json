@@ -7,11 +7,11 @@
       "required": false
     },
     {
-      "id": "#c:savanna",
+      "id": "#c:is_savanna",
       "required": false
     },
     {
-      "id": "#c:jungle",
+      "id": "#c:is_jungle",
       "required": false
     },
     {

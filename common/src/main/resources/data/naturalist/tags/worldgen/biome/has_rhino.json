@@ -6,7 +6,7 @@
       "required": false
     },
     {
-      "id": "#c:savanna",
+      "id": "#c:is_savanna",
       "required": false
     }
   ]

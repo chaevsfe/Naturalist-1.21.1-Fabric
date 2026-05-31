@@ -9,7 +9,7 @@
       "required": false
     },
     {
-      "id": "#c:swamp",
+      "id": "#c:is_swamp",
       "required": false
     }
   ,
@@ -22,11 +22,11 @@
       "required": false
     },
     {
-      "id": "#c:forest",
+      "id": "#c:is_forest",
       "required": false
     },
     {
-      "id": "#c:plains",
+      "id": "#c:is_plains",
       "required": false
     }
   ]

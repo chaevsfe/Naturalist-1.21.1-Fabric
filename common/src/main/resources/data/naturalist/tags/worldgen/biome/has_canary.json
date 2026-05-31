@@ -7,11 +7,11 @@
       "required": false
     },
     {
-      "id": "#c:mountain",
+      "id": "#c:is_mountain",
       "required": false
     },
     {
-      "id": "#c:extreme_hills",
+      "id": "#c:is_hill",
       "required": false
     }
   ]
