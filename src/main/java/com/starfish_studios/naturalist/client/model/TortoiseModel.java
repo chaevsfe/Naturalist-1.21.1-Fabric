@@ -4,59 +4,32 @@ import com.starfish_studios.naturalist.Naturalist;
 import com.starfish_studios.naturalist.common.entity.Tortoise;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Mth;
-import org.jetbrains.annotations.NotNull;
-import software.bernie.geckolib.constant.DataTickets;
-import software.bernie.geckolib.cache.object.GeoBone;
-import software.bernie.geckolib.animation.AnimationState;
+import net.minecraft.resources.Identifier;
+import software.bernie.geckolib.constant.dataticket.DataTicket;
 import software.bernie.geckolib.model.GeoModel;
-import software.bernie.geckolib.model.data.EntityModelData;
+import software.bernie.geckolib.renderer.base.GeoRenderState;
 
 @Environment(EnvType.CLIENT)
 public class TortoiseModel extends GeoModel<Tortoise> {
+    public static final DataTicket<Integer> TORTOISE_VARIANT = DataTicket.create("tortoise_variant", Integer.class);
 
     @Override
-    @SuppressWarnings("removal")
-    public @NotNull ResourceLocation getModelResource(Tortoise tortoise) {
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "geo/entity/tortoise.geo.json");
+    public Identifier getModelResource(GeoRenderState renderState) {
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "models/entity/tortoise.geo.json");
     }
 
     @Override
-    @SuppressWarnings("removal")
-    public ResourceLocation getTextureResource(@NotNull Tortoise tortoise) {
-        return switch (tortoise.getVariant()) {
-            case 1 -> ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/tortoise/green.png");
-            case 2 -> ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/tortoise/black.png");
-            default -> ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/tortoise/brown.png");
+    public Identifier getTextureResource(GeoRenderState renderState) {
+        int variant = renderState.getOrDefaultGeckolibData(TORTOISE_VARIANT, 0);
+        return switch (variant) {
+            case 1 -> Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/tortoise/green.png");
+            case 2 -> Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/tortoise/black.png");
+            default -> Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/tortoise/brown.png");
         };
     }
 
     @Override
-    public ResourceLocation getAnimationResource(Tortoise tortoise) {
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "animations/tortoise.rp_anim.json");
-    }
-
-    @Override
-    public void setCustomAnimations(@NotNull Tortoise entity, long instanceId, AnimationState<Tortoise> animationState) {
-        super.setCustomAnimations(entity, instanceId, animationState);
-
-        if (animationState == null) return;
-
-        EntityModelData extraDataOfType = animationState.getData(DataTickets.ENTITY_MODEL_DATA);
-        GeoBone head = this.getAnimationProcessor().getBone("head");
-
-        if (entity.isBaby()) {
-            head.setScaleX(1.4F);
-            head.setScaleY(1.4F);
-            head.setScaleZ(1.4F);
-        } else {
-            head.setScaleX(1.0F);
-            head.setScaleY(1.0F);
-            head.setScaleZ(1.0F);
-        }
-
-        head.setRotX(extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
-        head.setRotY(extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
+    public Identifier getAnimationResource(Tortoise tortoise) {
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "animations/tortoise.rp_anim.json");
     }
 }

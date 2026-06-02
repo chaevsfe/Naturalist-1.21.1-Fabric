@@ -29,7 +29,7 @@ import net.minecraft.world.phys.*;
         final boolean b = !isHoldingLivingEntity(stack);
         final boolean b1 = canCaptureLivingEntity(interactionTarget);
         if (b && b1) {
-            if (!player.level().isClientSide) {
+            if (!player.level().isClientSide()) {
                 CompoundTag compoundTag = new CompoundTag();
 
                 if (interactionTarget.isPassenger()) {

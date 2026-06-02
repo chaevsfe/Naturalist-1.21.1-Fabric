@@ -258,21 +258,21 @@ public class Rhino extends NaturalistAnimal implements NaturalistGeoEntity {
     private <E extends Rhino> PlayState predicate(final AnimationState<E> event) {
         if (this.stunnedTick > 0) {
             event.getController().setAnimation(STUNNED);
-            event.getController().setAnimationSpeed(1.0F);
+            event.getController().setAnimationSpeed(0.75F);
         } else if (event.isMoving()) {
             if (this.isSprinting()) {
                 event.getController().setAnimation(RUN);
-                event.getController().setAnimationSpeed(3.0F);
+                event.getController().setAnimationSpeed(2.25F);
             } else {
                 event.getController().setAnimation(WALK);
-                event.getController().setAnimationSpeed(1.0F);
+                event.getController().setAnimationSpeed(0.75F);
             }
         } else if (this.hasChargeCooldown() && this.hasTarget()) {
             event.getController().setAnimation(FOOT);
-            event.getController().setAnimationSpeed(1.0F);
+            event.getController().setAnimationSpeed(1.5F);
         } else {
             event.getController().setAnimation(IDLE);
-            event.getController().setAnimationSpeed(1.0F);
+            event.getController().setAnimationSpeed(0.75F);
         }
         return PlayState.CONTINUE;
     }
@@ -298,7 +298,7 @@ public class Rhino extends NaturalistAnimal implements NaturalistGeoEntity {
 
         if (this.swinging && event.getController().getAnimationState().equals(AnimationController.State.STOPPED)) {
             event.setAnimation(ATTACK);
-            event.getController().setAnimationSpeed(1.3F);
+            event.getController().setAnimationSpeed(2.0F);
             event.getController().forceAnimationReset();
         }
         this.swinging = false;

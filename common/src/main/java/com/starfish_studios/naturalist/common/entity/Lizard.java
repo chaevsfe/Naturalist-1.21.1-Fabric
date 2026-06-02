@@ -255,14 +255,15 @@ public class Lizard extends TamableAnimal implements NaturalistGeoEntity {
     private <E extends Lizard> PlayState predicate(final AnimationState<E> event) {
         if (this.isInSittingPose()) {
             event.getController().setAnimation(SIT);
+            event.getController().setAnimationSpeed(0.75D);
             return PlayState.CONTINUE;
         } else if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
             event.getController().setAnimation(WALK);
-            event.getController().setAnimationSpeed(2.0D);
+            event.getController().setAnimationSpeed(1.5D);
             return PlayState.CONTINUE;
         }
         event.getController().forceAnimationReset();
-        
+
         return PlayState.STOP;
     }
 

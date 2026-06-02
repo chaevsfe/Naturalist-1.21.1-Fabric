@@ -46,7 +46,7 @@ import org.jetbrains.annotations.*;
         if (entityData != null) {
             Entity releasedEntity = AnimalCrateBlockItem.createEntityFromNBT(level, entityData);
             if (releasedEntity != null) {
-                if (!player.level().isClientSide) {
+                if (!player.level().isClientSide()) {
                     Vec3 position = new Vec3(getBlockPos().getX() + 0.5f, getBlockPos().getY() + 1.5f, getBlockPos().getZ() + 0.5f);
                     releasedEntity.absMoveTo(position.x, position.y, position.z, level.random.nextFloat() * 360f, 0);
                     releasedEntity.setDeltaMovement(new Vec3(0, 0.25f, 0));

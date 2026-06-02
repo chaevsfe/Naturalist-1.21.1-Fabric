@@ -4,25 +4,24 @@ import com.starfish_studios.naturalist.Naturalist;
 import com.starfish_studios.naturalist.common.entity.Firefly;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import software.bernie.geckolib.model.GeoModel;
+import software.bernie.geckolib.renderer.base.GeoRenderState;
 
 @Environment(EnvType.CLIENT)
 public class FireflyModel extends GeoModel<Firefly> {
     @Override
-    @SuppressWarnings("removal")
-    public ResourceLocation getModelResource(Firefly firefly) {
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "geo/entity/firefly.geo.json");
+    public Identifier getModelResource(GeoRenderState renderState) {
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "models/entity/firefly.geo.json");
     }
 
     @Override
-    @SuppressWarnings("removal")
-    public ResourceLocation getTextureResource(Firefly firefly) {
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/firefly/firefly.png");
+    public Identifier getTextureResource(GeoRenderState renderState) {
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/firefly/firefly.png");
     }
 
     @Override
-    public ResourceLocation getAnimationResource(Firefly firefly) {
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "animations/firefly.rp_anim.json");
+    public Identifier getAnimationResource(Firefly firefly) {
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "animations/firefly.rp_anim.json");
     }
 }

@@ -8,11 +8,11 @@
       "required": false
     },
     {
-      "id": "#c:is_savanna",
+      "id": "#c:savanna",
       "required": false
     },
     {
-      "id": "#c:is_desert",
+      "id": "#c:desert",
       "required": false
     }
   ]

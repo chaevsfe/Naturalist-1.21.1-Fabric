@@ -12,12 +12,12 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.renderer.GameRenderer;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Inventory;
 
 @Environment(EnvType.CLIENT)
 public class ElephantInventoryScreen extends AbstractContainerScreen<ElephantInventoryMenu> {
-    private static final ResourceLocation ELEPHANT_INVENTORY_LOCATION = ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/gui/container/elephant.png");
+    private static final Identifier ELEPHANT_INVENTORY_LOCATION = Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/gui/container/elephant.png");
     private final Elephant elephant;
     private float xMouse;
     private float yMouse;

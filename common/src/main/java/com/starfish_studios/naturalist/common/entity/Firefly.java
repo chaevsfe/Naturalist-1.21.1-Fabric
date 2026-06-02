@@ -243,6 +243,7 @@ public class Firefly extends NaturalistAnimal implements FlyingAnimal, Naturalis
 
     private <E extends Firefly> PlayState predicate(final AnimationState<E> event) {
         event.getController().setAnimation(FLY);
+        event.getController().setAnimationSpeed(0.75D);
         return PlayState.CONTINUE;
     }
 

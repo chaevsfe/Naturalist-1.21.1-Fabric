@@ -17,8 +17,8 @@ import net.minecraft.world.entity.ai.control.BodyRotationControl;
 import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.entity.animal.horse.AbstractChestedHorse;
-import net.minecraft.world.entity.animal.horse.AbstractHorse;
+import net.minecraft.world.entity.animal.equine.AbstractChestedHorse;
+import net.minecraft.world.entity.animal.equine.AbstractHorse;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -84,7 +84,7 @@ public class Zebra extends AbstractChestedHorse {
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel serverLevel, AgeableMob ageableMob) {
-        AbstractHorse zebra = NaturalistEntityTypes.ZEBRA.get().create(serverLevel);
+        AbstractHorse zebra = NaturalistEntityTypes.ZEBRA.get().create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
         this.setOffspringAttributes(ageableMob, zebra);
         return zebra;
     }

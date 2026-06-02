@@ -9,7 +9,7 @@ import com.starfish_studios.naturalist.common.entity.core.ai.navigation.SmartBod
 import com.starfish_studios.naturalist.core.registry.NaturalistEntityTypes;
 import com.starfish_studios.naturalist.core.registry.NaturalistRegistry;
 import com.starfish_studios.naturalist.core.registry.NaturalistTags;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
@@ -48,14 +48,16 @@ import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.PathType;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import org.jetbrains.annotations.Nullable;
@@ -92,7 +94,7 @@ public class Butterfly extends NaturalistAnimal implements NaturalistGeoEntity, 
     @Override
     protected void registerGoals() {
         this.goalSelector.addGoal(1, new BreedGoal(this, 1.0D));
-        this.goalSelector.addGoal(2, new TemptGoal(this, 1.25D, Ingredient.of(ItemTags.FLOWERS), false));
+        this.goalSelector.addGoal(2, new TemptGoal(this, 1.25D, (stack) -> stack.is(ItemTags.FLOWERS), false));
         this.goalSelector.addGoal(3, new FollowParentGoal(this, 1.25D));
         this.goalSelector.addGoal(4, new ButterflyGrowCropGoal(this, 1.0D, 16, 4));
         this.goalSelector.addGoal(5, new ButterflyPollinateGoal(this, 1.0D, 16, 4));
@@ -101,7 +103,7 @@ public class Butterfly extends NaturalistAnimal implements NaturalistGeoEntity, 
     }
 
     public static AttributeSupplier.Builder createAttributes() {
-        return Mob.createMobAttributes().add(Attributes.MAX_HEALTH, 10.0D).add(Attributes.FLYING_SPEED, 0.6F).add(Attributes.MOVEMENT_SPEED, 0.3F);
+        return Mob.createMobAttributes().add(Attributes.MAX_HEALTH, 10.0D).add(Attributes.FLYING_SPEED, 0.6F).add(Attributes.TEMPT_RANGE, 10).add(Attributes.MOVEMENT_SPEED, 0.3F);
     }
 
     @Override
@@ -113,7 +115,6 @@ public class Butterfly extends NaturalistAnimal implements NaturalistGeoEntity, 
         };
         navigation.setCanOpenDoors(false);
         navigation.setCanFloat(false);
-        navigation.setCanPassDoors(true);
         return navigation;
     }
 
@@ -132,16 +133,16 @@ public class Butterfly extends NaturalistAnimal implements NaturalistGeoEntity, 
         builder.define(HAS_NECTAR, false);
     }
 
-    public void addAdditionalSaveData(CompoundTag compound) {
-        super.addAdditionalSaveData(compound);
-        compound.putInt("Variant", getVariant().getId());
-        compound.putBoolean("FromHand", this.fromHand());
+    protected void addAdditionalSaveData(ValueOutput view) {
+        super.addAdditionalSaveData(view);
+        view.putInt("Variant", getVariant().getId());
+        view.putBoolean("FromHand", this.fromHand());
     }
 
-    public void readAdditionalSaveData(CompoundTag compound) {
-        super.readAdditionalSaveData(compound);
-        this.setVariant(Butterfly.Variant.BY_ID[compound.getInt("Variant")]);
-        this.setFromHand(compound.getBoolean("FromHand"));
+    protected void readAdditionalSaveData(ValueInput view) {
+        super.readAdditionalSaveData(view);
+        this.setVariant(Butterfly.Variant.BY_ID[view.getIntOr("Variant", 0)]);
+        this.setFromHand(view.getBooleanOr("FromHand", false));
     }
 
     public Butterfly.Variant getVariant() {
@@ -192,20 +193,19 @@ public class Butterfly extends NaturalistAnimal implements NaturalistGeoEntity, 
 
     public void loadFromHandTag(@NotNull CompoundTag tag) {
         Catchable.loadDefaultDataFromHandTag(this, tag);
-        int i = tag.getInt("Variant");
-        if (i >= 0 && i < Butterfly.Variant.BY_ID.length) {
-            this.setVariant(Butterfly.Variant.BY_ID[i]);
-        } else {
-            LOGGER.error("Invalid variant: {}", i);
-        }
+        tag.getInt("Variant").ifPresent(i -> {
+            if (i >= 0 && i < Butterfly.Variant.BY_ID.length) {
+                this.setVariant(Butterfly.Variant.BY_ID[i]);
+            } else {
+                LOGGER.error("Invalid variant: {}", i);
+            }
+        });
 
-        if (tag.contains("Age")) {
-            this.setAge(tag.getInt("Age"));
-        }
+        tag.getInt("Age").ifPresent(this::setAge);
 
-        if (tag.contains("HuntingCooldown")) {
-            this.getBrain().setMemoryWithExpiry(MemoryModuleType.HAS_HUNTING_COOLDOWN, true, tag.getLong("HuntingCooldown"));
-        }
+        tag.getLong("HuntingCooldown").ifPresent(cooldown -> {
+            this.getBrain().setMemoryWithExpiry(MemoryModuleType.HAS_HUNTING_COOLDOWN, true, cooldown);
+        });
 
     }
 
@@ -227,8 +227,8 @@ public class Butterfly extends NaturalistAnimal implements NaturalistGeoEntity, 
 
     @Override
     @Nullable
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, @org.jetbrains.annotations.Nullable SpawnGroupData spawnData) {
-        if (reason == MobSpawnType.BUCKET) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, EntitySpawnReason reason, @org.jetbrains.annotations.Nullable SpawnGroupData spawnData) {
+        if (reason == EntitySpawnReason.BUCKET) {
             return spawnData;
         } else {
             RandomSource randomSource = level.getRandom();
@@ -242,7 +242,7 @@ public class Butterfly extends NaturalistAnimal implements NaturalistGeoEntity, 
         }
     }
 
-    public static boolean checkButterflySpawnRules(EntityType<? extends Butterfly> pType, ServerLevelAccessor pLevel, MobSpawnType pReason, @NotNull BlockPos pPos, RandomSource pRandom) {
+    public static boolean checkButterflySpawnRules(EntityType<? extends Butterfly> pType, ServerLevelAccessor pLevel, EntitySpawnReason pReason, @NotNull BlockPos pPos, RandomSource pRandom) {
         return pLevel.getBlockState(pPos.below()).is(NaturalistTags.BlockTags.BUTTERFLIES_SPAWNABLE_ON);
     }
 
@@ -303,7 +303,7 @@ public class Butterfly extends NaturalistAnimal implements NaturalistGeoEntity, 
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob mob) {
-        return NaturalistEntityTypes.CATERPILLAR.get().create(level);
+        return NaturalistEntityTypes.CATERPILLAR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Override
@@ -312,7 +312,7 @@ public class Butterfly extends NaturalistAnimal implements NaturalistGeoEntity, 
     }
 
     @Override
-    public boolean causeFallDamage(float pFallDistance, float pMultiplier, DamageSource pSource) {
+    public boolean causeFallDamage(double pFallDistance, float pMultiplier, DamageSource pSource) {
         return false;
     }
 
@@ -333,14 +333,14 @@ public class Butterfly extends NaturalistAnimal implements NaturalistGeoEntity, 
         return this.geoCache;
     }
 
-    protected <E extends Butterfly> PlayState predicate(final AnimationState<E> event) {
-        event.getController().setAnimation(FLY);
+    protected PlayState predicate(final AnimationTest<Butterfly> event) {
+        event.setAnimation(FLY);
         return PlayState.CONTINUE;
     }
 
     @Override
     public void registerControllers(final AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 5, this::predicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
     }
 
     // endregion

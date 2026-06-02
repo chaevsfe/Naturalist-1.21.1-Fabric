@@ -30,13 +30,14 @@ public class NoFluidMobBucketWithVariantsItem extends NoFluidMobBucketItem {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flagIn) {
+    public void appendHoverText(ItemStack stack, Item.TooltipContext context, net.minecraft.world.item.component.TooltipDisplay tooltipDisplay, java.util.function.Consumer<Component> tooltip, TooltipFlag flagIn) {
         if (this.type == NaturalistEntityTypes.SNAIL.get()) {
             CustomData customData = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
             CompoundTag compoundnbt = customData.copyTag();
-            if (compoundnbt.contains("Color", 3)) {
-                Snail.Color color = Snail.Color.getTypeById(compoundnbt.getInt("Color"));
-                tooltip.add((Component.translatable(String.format("item.minecraft.firework_star.%s", color.toString().toLowerCase())).withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY)));
+            if (compoundnbt.contains("Color")) {
+                int colorId = compoundnbt.getInt("Color").orElse(0);
+                Snail.Color color = Snail.Color.getTypeById(colorId);
+                tooltip.accept((Component.translatable(String.format("item.minecraft.firework_star.%s", color.toString().toLowerCase())).withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY)));
             }
         }
     }

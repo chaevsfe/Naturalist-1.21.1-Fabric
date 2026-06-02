@@ -118,10 +118,12 @@ public class Caterpillar extends ClimbingAnimal implements NaturalistGeoEntity, 
         if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
             {
                 event.getController().setAnimation(CRAWL);
+                event.getController().setAnimationSpeed(0.75D);
                 return PlayState.CONTINUE;
             }
         } else {
             event.getController().setAnimation(IDLE);
+            event.getController().setAnimationSpeed(0.75D);
             return PlayState.CONTINUE;
         }
     }

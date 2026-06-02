@@ -8,7 +8,6 @@ import com.starfish_studios.naturalist.common.entity.core.ai.navigation.MMPathNa
 import com.starfish_studios.naturalist.common.entity.core.ai.navigation.SmartBodyHelper;
 import com.starfish_studios.naturalist.core.registry.NaturalistEntityTypes;
 import com.starfish_studios.naturalist.core.registry.NaturalistSoundEvents;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -22,7 +21,7 @@ import net.minecraft.util.valueproviders.UniformInt;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.*;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
@@ -32,23 +31,24 @@ import net.minecraft.world.entity.ai.goal.*;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.goal.target.ResetUniversalAngerTargetGoal;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
-import net.minecraft.world.entity.animal.Bee;
+import net.minecraft.world.entity.animal.bee.Bee;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import com.starfish_studios.naturalist.common.entity.core.NaturalistGeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import org.jetbrains.annotations.Nullable;
-import java.util.UUID;
 
 public class Elephant extends NaturalistAnimal implements NeutralMob, NaturalistGeoEntity {
     protected static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.sf_nba.elephant.idle");
@@ -59,9 +59,8 @@ public class Elephant extends NaturalistAnimal implements NeutralMob, Naturalist
     private static final EntityDataAccessor<Boolean> DRINKING = SynchedEntityData.defineId(Elephant.class, EntityDataSerializers.BOOLEAN);
     private static final UniformInt PERSISTENT_ANGER_TIME = TimeUtil.rangeOfSeconds(20, 39);
     private static final EntityDataAccessor<Integer> REMAINING_ANGER_TIME = SynchedEntityData.defineId(Elephant.class, EntityDataSerializers.INT);
-    private int remainingPersistentAngerTime;
     @org.jetbrains.annotations.Nullable
-    private UUID persistentAngerTarget;
+    private EntityReference<LivingEntity> persistentAngerTarget;
 
     public Elephant(EntityType<? extends NaturalistAnimal> entityType, Level level) {
         super(entityType, level);
@@ -95,7 +94,7 @@ public class Elephant extends NaturalistAnimal implements NeutralMob, Naturalist
     }
 
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, @Nullable SpawnGroupData spawnData) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, EntitySpawnReason reason, @Nullable SpawnGroupData spawnData) {
         AgeableMobGroupData ageableMobGroupData;
         if (spawnData == null) {
             spawnData = new AgeableMobGroupData(true);
@@ -105,20 +104,20 @@ public class Elephant extends NaturalistAnimal implements NeutralMob, Naturalist
         }
         ageableMobGroupData.increaseGroupSizeByOne();
         RandomSource random = level.getRandom();
-        this.getAttribute(Attributes.FOLLOW_RANGE).addPermanentModifier(new AttributeModifier(ResourceLocation.fromNamespaceAndPath("naturalist", "random_spawn_bonus"), random.triangle(0.0, 0.11485000000000001), AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+        this.getAttribute(Attributes.FOLLOW_RANGE).addPermanentModifier(new AttributeModifier(Identifier.fromNamespaceAndPath("naturalist", "random_spawn_bonus"), random.triangle(0.0, 0.11485000000000001), AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
         return spawnData;
     }
 
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel serverLevel, AgeableMob ageableMob) {
-        return NaturalistEntityTypes.ELEPHANT.get().create(serverLevel);
+        return NaturalistEntityTypes.ELEPHANT.get().create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
 
     @Override
-    public void customServerAiStep() {
-        super.customServerAiStep();
+    protected void customServerAiStep(ServerLevel serverLevel) {
+        super.customServerAiStep(serverLevel);
         if (this.getMoveControl().hasWanted()) {
             this.setSprinting(this.getMoveControl().getSpeedModifier() >= 1.2D);
         } else {
@@ -162,11 +161,11 @@ public class Elephant extends NaturalistAnimal implements NeutralMob, Naturalist
     }
 
     @Override
-    public boolean doHurtTarget(Entity target) {
-        boolean shouldHurt = target.hurt(target.damageSources().mobAttack(this), (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE));
+    public boolean doHurtTarget(ServerLevel serverLevel, Entity target) {
+        boolean shouldHurt = super.doHurtTarget(serverLevel, target);
         if (shouldHurt && target instanceof LivingEntity livingEntity) {
             Vec3 knockbackDirection = new Vec3(this.blockPosition().getX() - target.getX(), 0.0, this.blockPosition().getZ() - target.getZ()).normalize();
-            float shieldBlockModifier = livingEntity.isDamageSourceBlocked(target.damageSources().mobAttack(this)) ? 0.5f : 1.0f;
+            float shieldBlockModifier = livingEntity.isBlocking() ? 0.5f : 1.0f;
             livingEntity.knockback(shieldBlockModifier * 3.0D, knockbackDirection.x(), knockbackDirection.z());
             double knockbackResistance = Math.max(0.0, 1.0 - livingEntity.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE));
             livingEntity.setDeltaMovement(livingEntity.getDeltaMovement().add(0.0, 0.5f * knockbackResistance, 0.0));
@@ -184,17 +183,17 @@ public class Elephant extends NaturalistAnimal implements NeutralMob, Naturalist
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag pCompound) {
-        super.addAdditionalSaveData(pCompound);
-        this.addPersistentAngerSaveData(pCompound);
-        // pCompound.putInt("DirtyTicks", this.getDirtyTicks());
+    protected void addAdditionalSaveData(ValueOutput view) {
+        super.addAdditionalSaveData(view);
+        this.addPersistentAngerSaveData(view);
+        // view.putInt("DirtyTicks", this.getDirtyTicks());
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag pCompound) {
-        super.readAdditionalSaveData(pCompound);
-        this.readPersistentAngerSaveData(this.level(), pCompound);
-        // this.setDirtyTicks(pCompound.getInt("DirtyTicks"));
+    protected void readAdditionalSaveData(ValueInput view) {
+        super.readAdditionalSaveData(view);
+        this.readPersistentAngerSaveData(this.level(), view);
+        // this.setDirtyTicks(view.getIntOr("DirtyTicks", 0));
         // this.updateContainerEquipment();
     }
 
@@ -221,7 +220,7 @@ public class Elephant extends NaturalistAnimal implements NeutralMob, Naturalist
     @Override
     public void aiStep() {
         super.aiStep();
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide()) {
             this.updatePersistentAnger((ServerLevel)this.level(), true);
         }
         /* if (this.level instanceof ServerLevel serverLevel) {
@@ -243,27 +242,27 @@ public class Elephant extends NaturalistAnimal implements NeutralMob, Naturalist
 
     @Override
     public void startPersistentAngerTimer() {
-        this.setRemainingPersistentAngerTime(PERSISTENT_ANGER_TIME.sample(this.random));
+        this.setTimeToRemainAngry(PERSISTENT_ANGER_TIME.sample(this.random));
     }
 
     @Override
-    public void setRemainingPersistentAngerTime(int pTime) {
-        this.entityData.set(REMAINING_ANGER_TIME, pTime);
+    public void setPersistentAngerEndTime(long pTime) {
+        this.entityData.set(REMAINING_ANGER_TIME, (int) pTime);
     }
 
     @Override
-    public int getRemainingPersistentAngerTime() {
+    public long getPersistentAngerEndTime() {
         return this.entityData.get(REMAINING_ANGER_TIME);
     }
 
     @Override
-    public void setPersistentAngerTarget(@Nullable UUID pTarget) {
+    public void setPersistentAngerTarget(@Nullable EntityReference<LivingEntity> pTarget) {
         this.persistentAngerTarget = pTarget;
     }
 
     @Nullable
     @Override
-    public UUID getPersistentAngerTarget() {
+    public EntityReference<LivingEntity> getPersistentAngerTarget() {
         return this.persistentAngerTarget;
     }
 
@@ -271,29 +270,30 @@ public class Elephant extends NaturalistAnimal implements NeutralMob, Naturalist
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return this.geoCache;
     }
-    private <E extends Elephant> @NotNull PlayState predicate(final AnimationState<E> event) {
+    private @NotNull PlayState predicate(final AnimationTest<Elephant> event) {
         if (this.isBaby() || this.getTarget() != null) {
-            event.setControllerSpeed(1.3f + event.getLimbSwingAmount());
+            event.setControllerSpeed((float)(0.52F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
         }
         if (event.isMoving()) {
             if (this.isSprinting()) {
-                event.getController().setAnimation(RUN);
+                event.setAnimation(RUN);
             } else {
-                event.getController().setAnimation(WALK);
+                event.setAnimation(WALK);
             }
         } /*else if (this.isDrinking()) {
-            event.getController().setAnimation(RawAnimation.begin().thenLoop("elephant.water"));
+            event.setAnimation(RawAnimation.begin().thenLoop("elephant.water"));
         }*/ else {
-            event.getController().setAnimation(IDLE);
+            event.setAnimation(IDLE);
         }
         return PlayState.CONTINUE;
     }
 
-    private <E extends Elephant> PlayState swingPredicate(final @NotNull AnimationState<E> event) {
-        if (this.swinging && event.getController().getAnimationState().equals(AnimationController.State.STOPPED)) {
-            event.getController().forceAnimationReset();
+    private PlayState swingPredicate(final @NotNull AnimationTest<Elephant> event) {
+        if (this.swinging && event.controller().getPlayState() == PlayState.STOP) {
+            event.controller().reset();
+            
         
-            event.getController().setAnimation(RawAnimation.begin().thenPlay("animation.sf_nba.elephant.swing"));
+            event.setAnimation(RawAnimation.begin().thenPlay("animation.sf_nba.elephant.swing"));
             this.swinging = false;
         }
         return PlayState.CONTINUE;
@@ -302,8 +302,8 @@ public class Elephant extends NaturalistAnimal implements NeutralMob, Naturalist
     @Override
     public void registerControllers(final AnimatableManager.ControllerRegistrar controllers) {
         // data.setResetSpeedInTicks(10);
-        controllers.add(new AnimationController<>(this, "controller", 5, this::predicate).setSoundKeyframeHandler(event -> {}));
-        controllers.add(new AnimationController<>(this, "swingController", 0, this::swingPredicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("swingController", 0, this::swingPredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
     }
 
     static class ElephantMeleeAttackGoal extends MeleeAttackGoal {

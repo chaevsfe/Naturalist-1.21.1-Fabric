@@ -7,7 +7,7 @@
       "required": false
     },
     {
-      "id": "#c:is_swamp",
+      "id": "#c:swamp",
       "required": false
     }
   ]

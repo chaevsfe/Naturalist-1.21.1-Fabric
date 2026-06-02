@@ -4,54 +4,33 @@ import com.starfish_studios.naturalist.Naturalist;
 import com.starfish_studios.naturalist.common.entity.Deer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Mth;
-import org.jetbrains.annotations.NotNull;
-import software.bernie.geckolib.constant.DataTickets;
-import software.bernie.geckolib.cache.object.GeoBone;
-import software.bernie.geckolib.animation.AnimationState;
+import net.minecraft.resources.Identifier;
+import software.bernie.geckolib.constant.dataticket.DataTicket;
 import software.bernie.geckolib.model.GeoModel;
-import software.bernie.geckolib.model.data.EntityModelData;
+import software.bernie.geckolib.renderer.base.GeoRenderState;
 
 @Environment(EnvType.CLIENT)
 public class DeerModel extends GeoModel<Deer> {
+    public static final DataTicket<Boolean> IS_BABY = DataTicket.create("deer_is_baby", Boolean.class);
+
     @Override
-    @SuppressWarnings("removal")
-    public ResourceLocation getModelResource(Deer deer) {
-        if (deer.isBaby()) {
-            return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "geo/entity/fawn.geo.json");
+    public Identifier getModelResource(GeoRenderState renderState) {
+        if (Boolean.TRUE.equals(renderState.getOrDefaultGeckolibData(IS_BABY, false))) {
+            return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "models/entity/fawn.geo.json");
         }
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "geo/entity/deer.geo.json");
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "models/entity/deer.geo.json");
     }
 
     @Override
-    @SuppressWarnings("removal")
-    public ResourceLocation getTextureResource(Deer deer) {
-        if (deer.isBaby()) {
-            return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/fawn.png");
+    public Identifier getTextureResource(GeoRenderState renderState) {
+        if (Boolean.TRUE.equals(renderState.getOrDefaultGeckolibData(IS_BABY, false))) {
+            return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/fawn.png");
         }
-
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/deer.png");
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/deer.png");
     }
 
     @Override
-    public ResourceLocation getAnimationResource(Deer deer) {
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "animations/deer.rp_anim.json");
+    public Identifier getAnimationResource(Deer deer) {
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "animations/deer.rp_anim.json");
     }
-
-    @Override
-    public void setCustomAnimations(@NotNull Deer entity, long instanceId, AnimationState<Deer> animationState) {
-        super.setCustomAnimations(entity, instanceId, animationState);
-
-        if (animationState == null) return;
-
-        EntityModelData extraDataOfType = animationState.getData(DataTickets.ENTITY_MODEL_DATA);
-        GeoBone head = this.getAnimationProcessor().getBone("head");
-
-        if (!entity.isEating()) {
-            head.setRotX(extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
-            head.setRotY(extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
-        }
-    }
-
 }

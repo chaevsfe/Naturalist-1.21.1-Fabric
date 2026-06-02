@@ -277,16 +277,17 @@ public class Alligator extends NaturalistAnimal implements NaturalistGeoEntity, 
         } else*/ if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
             if (this.isInWater()) {
                 event.getController().setAnimation(SWIM);
+                event.getController().setAnimationSpeed(0.75D);
             } else {
                 event.getController().setAnimation(WALK);
                 if (this.isBaby() || this.getTarget() != null) {
-                    event.getController().setAnimationSpeed(3.0D);
+                    event.getController().setAnimationSpeed(2.25D);
                 }
-                event.getController().setAnimationSpeed(2.0D);
+                event.getController().setAnimationSpeed(1.5D);
             }
         } else {
             event.getController().setAnimation(IDLE);
-            event.getController().setAnimationSpeed(0.6D);
+            event.getController().setAnimationSpeed(0.45D);
         }
         return PlayState.CONTINUE;
     }
@@ -296,6 +297,7 @@ public class Alligator extends NaturalistAnimal implements NaturalistGeoEntity, 
             event.getController().forceAnimationReset();
 
             event.getController().setAnimation(BITE);
+            event.getController().setAnimationSpeed(1.5D);
             this.swinging = false;
         }
         return PlayState.CONTINUE;

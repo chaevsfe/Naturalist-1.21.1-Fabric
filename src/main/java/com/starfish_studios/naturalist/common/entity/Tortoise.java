@@ -14,7 +14,6 @@ import com.starfish_studios.naturalist.core.registry.NaturalistSoundEvents;
 import com.starfish_studios.naturalist.core.registry.NaturalistTags;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -45,23 +44,26 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import com.starfish_studios.naturalist.common.entity.core.NaturalistGeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.keyframe.event.SoundKeyframeEvent;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.state.KeyFrameEvent;
+import software.bernie.geckolib.cache.animation.keyframeevent.SoundKeyframeData;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.List;
 
 public class Tortoise extends TamableAnimal implements NaturalistGeoEntity, HidingAnimal, EggLayingAnimal {
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
-    private static final Ingredient TEMPT_ITEMS = Ingredient.of(NaturalistTags.ItemTags.TORTOISE_TEMPT_ITEMS);
+    private static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> TEMPT_ITEMS = (stack) -> stack.is(NaturalistTags.ItemTags.TORTOISE_TEMPT_ITEMS);
     private static final EntityDataAccessor<Integer> VARIANT_ID = SynchedEntityData.defineId(Tortoise.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> HAS_EGG = SynchedEntityData.defineId(Tortoise.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> LAYING_EGG = SynchedEntityData.defineId(Tortoise.class, EntityDataSerializers.BOOLEAN);
@@ -81,7 +83,7 @@ public class Tortoise extends TamableAnimal implements NaturalistGeoEntity, Hidi
     }
 
     public static AttributeSupplier.@NotNull Builder createAttributes() {
-        return Mob.createMobAttributes().add(Attributes.MOVEMENT_SPEED, 0.17f).add(Attributes.MAX_HEALTH, 20.0).add(Attributes.ATTACK_DAMAGE, 2.0).add(Attributes.KNOCKBACK_RESISTANCE, 0.6);
+        return Mob.createMobAttributes().add(Attributes.TEMPT_RANGE, 10).add(Attributes.MOVEMENT_SPEED, 0.17f).add(Attributes.MAX_HEALTH, 20.0).add(Attributes.ATTACK_DAMAGE, 2.0).add(Attributes.KNOCKBACK_RESISTANCE, 0.6);
     }
 
 
@@ -98,13 +100,13 @@ public class Tortoise extends TamableAnimal implements NaturalistGeoEntity, Hidi
     @Nullable
     @Override
     protected SoundEvent getHurtSound(DamageSource pDamageSource) {
-        return SoundEvents.SHIELD_BLOCK;
+        return SoundEvents.SHIELD_BLOCK.value();
     }
 
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob otherParent) {
-        Tortoise tortoise = NaturalistEntityTypes.TORTOISE.get().create(level);
+        Tortoise tortoise = NaturalistEntityTypes.TORTOISE.get().create(level, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
         if (otherParent instanceof Tortoise tortoiseParent) {
             assert tortoise != null;
             if (this.getVariant() == tortoiseParent.getVariant()) {
@@ -112,13 +114,16 @@ public class Tortoise extends TamableAnimal implements NaturalistGeoEntity, Hidi
             } else {
                 tortoise.setVariant(this.random.nextBoolean() ? tortoiseParent.getVariant() : this.getVariant());
             }
-            tortoise.setOwnerUUID(this.random.nextBoolean() ? tortoiseParent.getOwnerUUID() : this.getOwnerUUID());
+            LivingEntity owner = this.random.nextBoolean() ? tortoiseParent.getOwner() : this.getOwner();
+            if (owner != null) {
+                tortoise.setOwnerReference(net.minecraft.world.entity.EntityReference.of(owner));
+            }
         }
         return tortoise;
     }
 
     @Override
-    public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, @Nullable SpawnGroupData spawnData) {
+    public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor level, DifficultyInstance difficulty, EntitySpawnReason reason, @Nullable SpawnGroupData spawnData) {
         Holder<Biome> holder = level.getBiome(this.blockPosition());
         if (holder.is(Biomes.SWAMP) || holder.is(Biomes.MANGROVE_SWAMP)) {
             this.setVariant(1);
@@ -179,15 +184,15 @@ public class Tortoise extends TamableAnimal implements NaturalistGeoEntity, Hidi
     }
 
     @Override
-    public boolean hurt(DamageSource source, float amount) {
-        return super.hurt(source, this.canHide() ? amount * 0.8F : amount);
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource source, float amount) {
+        return super.hurtServer(serverLevel, source, this.canHide() ? amount * 0.8F : amount);
     }
 
     @Override
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         InteractionResult interactionResult;
         ItemStack itemStack = player.getItemInHand(hand);
-        if (this.level().isClientSide) {
+        if (this.level().isClientSide()) {
             if (this.isTame() && this.isOwnedBy(player)) {
                 return InteractionResult.SUCCESS;
             }
@@ -235,7 +240,8 @@ public class Tortoise extends TamableAnimal implements NaturalistGeoEntity, Hidi
         if (this.isTame()) {
             return false;
         }
-        List<Player> players = this.level().getNearbyPlayers(TargetingConditions.forNonCombat().range(5.0D).selector(livingEntity -> EntitySelector.NO_CREATIVE_OR_SPECTATOR.test(livingEntity) && !livingEntity.isDiscrete() && !livingEntity.isHolding(TEMPT_ITEMS)), this, this.getBoundingBox().inflate(5.0D, 3.0D, 5.0D));
+        if (!(this.level() instanceof ServerLevel sl)) return false;
+        List<Player> players = sl.getNearbyPlayers(TargetingConditions.forNonCombat().range(5.0D).selector((livingEntity, level) -> EntitySelector.NO_CREATIVE_OR_SPECTATOR.test(livingEntity) && !livingEntity.isDiscrete() && !livingEntity.isHolding(TEMPT_ITEMS)), this, this.getBoundingBox().inflate(5.0D, 3.0D, 5.0D));
         return !players.isEmpty();
     }
 
@@ -268,17 +274,17 @@ public class Tortoise extends TamableAnimal implements NaturalistGeoEntity, Hidi
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag compound) {
-        super.addAdditionalSaveData(compound);
-        compound.putInt("Variant", this.getVariant());
-        compound.putBoolean("HasEgg", this.hasEgg());
+    protected void addAdditionalSaveData(ValueOutput view) {
+        super.addAdditionalSaveData(view);
+        view.putInt("Variant", this.getVariant());
+        view.putBoolean("HasEgg", this.hasEgg());
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag compound) {
-        super.readAdditionalSaveData(compound);
-        this.setVariant(compound.getInt("Variant"));
-        this.setHasEgg(compound.getBoolean("HasEgg"));
+    protected void readAdditionalSaveData(ValueInput view) {
+        super.readAdditionalSaveData(view);
+        this.setVariant(view.getIntOr("Variant", 0));
+        this.setHasEgg(view.getBooleanOr("HasEgg", false));
     }
 
     @Override
@@ -290,61 +296,61 @@ public class Tortoise extends TamableAnimal implements NaturalistGeoEntity, Hidi
         return this.geoCache;
     }
 
-    private <T extends Tortoise> PlayState predicate(final AnimationState<T> event) {
+    private PlayState predicate(final AnimationTest<Tortoise> event) {
         if (this.isInSittingPose()) {
-            event.getController().setAnimation(SIT);
+            event.setAnimation(SIT);
             return PlayState.CONTINUE;
         } else if (this.isLayingEgg())  {
-            event.getController().setAnimation(DIG);
+            event.setAnimation(DIG);
             return PlayState.CONTINUE;
         } else if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
-            event.getController().setAnimation(WALK);
+            event.setAnimation(WALK);
             if (this.isBaby()) {
-                event.getController().setAnimationSpeed(2.0D);
+                event.setControllerSpeed((float)(0.8F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
             } else {
-                event.getController().setAnimationSpeed(1.3D);
+                event.setControllerSpeed((float)(0.52F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
             }
             return PlayState.CONTINUE;
         } else {
-            event.getController().setAnimation(IDLE);
+            event.setAnimation(IDLE);
             return PlayState.CONTINUE;
         }
     }
 
-    private <T extends Tortoise> PlayState hidePredicate(final @NotNull AnimationState<T> event) {
+    private PlayState hidePredicate(final @NotNull AnimationTest<Tortoise> event) {
         if( this.canHide()) {
-            event.getController().setAnimation(HIDE);
+            event.setAnimation(HIDE);
             return PlayState.CONTINUE;
         }
-        event.getController().forceAnimationReset();
+        
 
         return PlayState.STOP;
     }
 
-    private <T extends Tortoise> PlayState hurtPredicate(final AnimationState<T> event) {
+    private PlayState hurtPredicate(final AnimationTest<Tortoise> event) {
         if(this.hurtTime > 0) {
-            event.getController().setAnimation(HURT);
+            event.setAnimation(HURT);
             return PlayState.CONTINUE;
         }
-        event.getController().forceAnimationReset();
+        
         
         return PlayState.STOP;
     }
 
     @Override
     public void registerControllers(final AnimatableManager.@NotNull ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 5, this::predicate).setSoundKeyframeHandler(this::soundListener));
-        controllers.add(new AnimationController<>(this, "hurtController", 5, this::hurtPredicate).setSoundKeyframeHandler(this::soundListener));
-        controllers.add(new AnimationController<>(this, "hideController", 0, this::hidePredicate).setSoundKeyframeHandler(this::soundListener));
+        controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(this::soundListener));
+        controllers.add(new AnimationController<>("hurtController", 5, this::hurtPredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(this::soundListener));
+        controllers.add(new AnimationController<>("hideController", 0, this::hidePredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(this::soundListener));
     }
 
-    private void soundListener(SoundKeyframeEvent<Tortoise> event) {
-        Tortoise animatable = event.getAnimatable();
-        if (animatable.level().isClientSide) {
-            if (event.getKeyframeData().getSound().equals("hide")) {
+    private void soundListener(KeyFrameEvent<Tortoise, SoundKeyframeData> event) {
+        Tortoise animatable = event.animatable();
+        if (animatable.level().isClientSide()) {
+            if (event.keyframeData().getSound().equals("hide")) {
                 animatable.level().playLocalSound(animatable.getX(), animatable.getY(), animatable.getZ(), NaturalistSoundEvents.TORTOISE_HIDE.get(), animatable.getSoundSource(), 0.5F, 1.0F, false);
             }
-            if (event.getKeyframeData().getSound().equals("thud")) {
+            if (event.keyframeData().getSound().equals("thud")) {
                 animatable.level().playLocalSound(animatable.getX(), animatable.getY(), animatable.getZ(), NaturalistSoundEvents.TORTOISE_THUD.get(), animatable.getSoundSource(), 0.5F, 1.0F, false);
             }
         }

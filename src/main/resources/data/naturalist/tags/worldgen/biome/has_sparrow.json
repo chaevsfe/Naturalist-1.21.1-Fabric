@@ -7,7 +7,7 @@
       "required": false
     },
     {
-      "id": "#c:is_plains",
+      "id": "#c:plains",
       "required": false
     }
   ]

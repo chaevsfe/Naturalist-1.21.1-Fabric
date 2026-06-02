@@ -244,7 +244,7 @@ public class Hippo extends NaturalistAnimal implements NaturalistGeoEntity {
     }
 
     private <E extends Hippo> PlayState predicate(final @NotNull AnimationState<E> event) {
-        event.getController().setAnimationSpeed(0.8D + event.getLimbSwingAmount());
+        event.getController().setAnimationSpeed(0.6D + event.getLimbSwingAmount() * 0.75D);
         if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
             if (!this.isInWater()) {
                 if (this.isSprinting()) {
@@ -269,8 +269,9 @@ public class Hippo extends NaturalistAnimal implements NaturalistGeoEntity {
     private <E extends Hippo> PlayState attackPredicate(final AnimationState<E> event) {
         if (this.swinging && event.getController().getAnimationState().equals(AnimationController.State.STOPPED)) {
             event.getController().forceAnimationReset();
-        
+
             event.getController().setAnimation(BITE);
+            event.getController().setAnimationSpeed(1.5D);
             this.swinging = false;
         }
         return PlayState.CONTINUE;

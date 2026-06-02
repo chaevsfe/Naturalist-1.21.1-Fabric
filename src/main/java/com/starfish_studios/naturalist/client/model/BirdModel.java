@@ -5,57 +5,44 @@ import com.starfish_studios.naturalist.common.entity.Bird;
 import com.starfish_studios.naturalist.core.registry.NaturalistEntityTypes;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Mth;
-import org.jetbrains.annotations.Nullable;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.EntityType;
 import software.bernie.geckolib.constant.DataTickets;
-import software.bernie.geckolib.cache.object.GeoBone;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.constant.dataticket.DataTicket;
 import software.bernie.geckolib.model.GeoModel;
-import software.bernie.geckolib.model.data.EntityModelData;
+import software.bernie.geckolib.renderer.base.GeoRenderState;
 
 @Environment(EnvType.CLIENT)
 public class BirdModel extends GeoModel<Bird> {
 
+    public static final DataTicket<EntityType<?>> BIRD_TYPE = DataTicket.create("bird_type", (Class<EntityType<?>>) (Class<?>) EntityType.class);
+
     @Override
-    @SuppressWarnings("removal")
-    public ResourceLocation getTextureResource(Bird bird) {
-        if (bird.getType().equals(NaturalistEntityTypes.BLUEJAY.get())) {
-            return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/bird/bluejay.png");
-        } else if (bird.getType().equals(NaturalistEntityTypes.CANARY.get())) {
-            return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/bird/canary.png");
-        } else if (bird.getType().equals(NaturalistEntityTypes.CARDINAL.get())) {
-            return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/bird/cardinal.png");
-        } else if (bird.getType().equals(NaturalistEntityTypes.FINCH.get())) {
-            return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/bird/finch.png");
-        } else if (bird.getType().equals(NaturalistEntityTypes.SPARROW.get())) {
-            return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/bird/sparrow.png");
-        } else {
-            return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/bird/robin.png");
+    public Identifier getTextureResource(GeoRenderState renderState) {
+        EntityType<?> type = renderState.getGeckolibData(BIRD_TYPE);
+        if (type != null) {
+            if (type.equals(NaturalistEntityTypes.BLUEJAY.get())) {
+                return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/bird/bluejay.png");
+            } else if (type.equals(NaturalistEntityTypes.CANARY.get())) {
+                return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/bird/canary.png");
+            } else if (type.equals(NaturalistEntityTypes.CARDINAL.get())) {
+                return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/bird/cardinal.png");
+            } else if (type.equals(NaturalistEntityTypes.FINCH.get())) {
+                return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/bird/finch.png");
+            } else if (type.equals(NaturalistEntityTypes.SPARROW.get())) {
+                return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/bird/sparrow.png");
+            }
         }
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/bird/robin.png");
     }
 
     @Override
-    @SuppressWarnings("removal")
-    public ResourceLocation getModelResource(Bird bird) {
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "geo/entity/bird.geo.json");
+    public Identifier getModelResource(GeoRenderState renderState) {
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "models/entity/bird.geo.json");
     }
 
     @Override
-    public ResourceLocation getAnimationResource(Bird bird) {
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "animations/bird.rp_anim.json");
-    }
-
-    @Override
-    public void setCustomAnimations(Bird entity, long instanceId, @Nullable AnimationState<Bird> animationState) {
-        super.setCustomAnimations(entity, instanceId, animationState);
-
-        if (animationState == null) return;
-
-        EntityModelData extraDataOfType = animationState.getData(DataTickets.ENTITY_MODEL_DATA);
-        GeoBone head = this.getAnimationProcessor().getBone("head");
-
-        head.setRotX(extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
-        head.setRotY(extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
+    public Identifier getAnimationResource(Bird bird) {
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "animations/bird.rp_anim.json");
     }
 }

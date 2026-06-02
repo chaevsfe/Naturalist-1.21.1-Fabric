@@ -343,6 +343,7 @@ public class Butterfly extends NaturalistAnimal implements NaturalistGeoEntity, 
 
     protected <E extends Butterfly> PlayState predicate(final AnimationState<E> event) {
         event.getController().setAnimation(FLY);
+        event.getController().setAnimationSpeed(0.75D);
         return PlayState.CONTINUE;
     }
 

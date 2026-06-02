@@ -5,7 +5,6 @@ import com.starfish_studios.naturalist.common.entity.core.NaturalistGeoEntity;
 import com.starfish_studios.naturalist.core.registry.NaturalistRegistry;
 import com.starfish_studios.naturalist.core.registry.NaturalistSoundEvents;
 import com.starfish_studios.naturalist.core.registry.NaturalistTags;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -18,17 +17,19 @@ import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.ai.goal.MeleeAttackGoal;
 import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
-import net.minecraft.world.entity.animal.AbstractFish;
-import net.minecraft.world.entity.animal.WaterAnimal;
+import net.minecraft.world.entity.animal.fish.AbstractFish;
+import net.minecraft.world.entity.animal.fish.WaterAnimal;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.NotNull;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 public class Catfish extends AbstractFish implements NaturalistGeoEntity {
@@ -61,7 +62,7 @@ public class Catfish extends AbstractFish implements NaturalistGeoEntity {
                 setKillCooldown(2400);
             }
         });
-        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, WaterAnimal.class, 10, true, false, (entity) -> entity.getType().is(NaturalistTags.EntityTypes.CATFISH_HOSTILES)));
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, WaterAnimal.class, 10, true, false, (entity, level) -> entity.getType().is(NaturalistTags.EntityTypes.CATFISH_HOSTILES)));
     }
 
     @Override
@@ -71,15 +72,15 @@ public class Catfish extends AbstractFish implements NaturalistGeoEntity {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag compound) {
-        super.addAdditionalSaveData(compound);
-        compound.putInt("KillCooldown", this.getKillCooldown());
+    protected void addAdditionalSaveData(ValueOutput view) {
+        super.addAdditionalSaveData(view);
+        view.putInt("KillCooldown", this.getKillCooldown());
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag compound) {
-        super.readAdditionalSaveData(compound);
-        this.setKillCooldown(compound.getInt("KillCooldown"));
+    protected void readAdditionalSaveData(ValueInput view) {
+        super.readAdditionalSaveData(view);
+        this.setKillCooldown(view.getIntOr("KillCooldown", 0));
     }
 
     public void setKillCooldown(int ticks) {
@@ -96,7 +97,10 @@ public class Catfish extends AbstractFish implements NaturalistGeoEntity {
     }
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.SALMON_AMBIENT;
+        // SALMON_AMBIENT is an empty sound event in modern MC (registered, no audio bound),
+        // which makes the engine log "Unable to play empty soundEvent". Return null for
+        // silence and no warning. Hurt/death/flop kept.
+        return null;
     }
 
     @Override
@@ -113,27 +117,21 @@ public class Catfish extends AbstractFish implements NaturalistGeoEntity {
     public @NotNull ItemStack getBucketItemStack() {
         return new ItemStack(NaturalistRegistry.CATFISH_BUCKET.get());
     }
-
-    @Override
-    public double getBoneResetTime() {
-        return 2;
-    }
-
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return this.geoCache;
     }
-    protected <E extends Catfish> @NotNull PlayState predicate(final AnimationState<E> event) {
+    protected @NotNull PlayState predicate(final AnimationTest<Catfish> event) {
         if (!this.isInWater()) {
-            event.getController().setAnimation(FLOP);
+            event.setAnimation(FLOP);
         } else {
-            event.getController().setAnimation(SWIM);
+            event.setAnimation(SWIM);
         }
         return PlayState.CONTINUE;
     }
 
     @Override
     public void registerControllers(final AnimatableManager.@NotNull ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 5, this::predicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
     }
 }

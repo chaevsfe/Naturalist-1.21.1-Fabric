@@ -3,9 +3,7 @@ package com.starfish_studios.naturalist.common.entity;
 import com.starfish_studios.naturalist.common.entity.core.NaturalistGeoEntity;
 import com.starfish_studios.naturalist.core.registry.NaturalistTags;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Vec3i;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -21,21 +19,23 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.*;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
-import net.minecraft.world.entity.ai.util.RandomPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import org.jetbrains.annotations.Nullable;
@@ -59,7 +59,7 @@ public class Dragonfly extends PathfinderMob implements NaturalistGeoEntity {
         return Mob.createMobAttributes().add(Attributes.MAX_HEALTH, 6.0);
     }
 
-    public static boolean checkDragonflySpawnRules(EntityType<? extends Dragonfly> pType, ServerLevelAccessor pLevel, MobSpawnType pReason, BlockPos pPos, RandomSource pRandom) {
+    public static boolean checkDragonflySpawnRules(EntityType<? extends Dragonfly> pType, ServerLevelAccessor pLevel, EntitySpawnReason pReason, BlockPos pPos, RandomSource pRandom) {
         return pLevel.getBlockState(pPos.below()).is(NaturalistTags.BlockTags.DRAGONFLIES_SPAWNABLE_ON);
     }
 
@@ -86,20 +86,20 @@ public class Dragonfly extends PathfinderMob implements NaturalistGeoEntity {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag compound) {
-        super.addAdditionalSaveData(compound);
-        compound.putInt("Variant", this.getVariant());
+    protected void addAdditionalSaveData(ValueOutput view) {
+        super.addAdditionalSaveData(view);
+        view.putInt("Variant", this.getVariant());
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag compound) {
-        super.readAdditionalSaveData(compound);
-        this.setVariant(compound.getInt("Variant"));
+    protected void readAdditionalSaveData(ValueInput view) {
+        super.readAdditionalSaveData(view);
+        this.setVariant(view.getIntOr("Variant", 0));
     }
 
     @Override
     @Nullable
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, @Nullable SpawnGroupData spawnData) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, EntitySpawnReason reason, @Nullable SpawnGroupData spawnData) {
         this.setVariant(level.getRandom().nextInt(3));
         return super.finalizeSpawn(level, difficulty, reason, spawnData);
     }
@@ -124,21 +124,19 @@ public class Dragonfly extends PathfinderMob implements NaturalistGeoEntity {
     }
 
     @Override
-    protected void customServerAiStep() {
-        super.customServerAiStep();
-        if (!(this.targetPosition == null || this.level().isEmptyBlock(this.targetPosition) && this.targetPosition.getY() > this.level().getMinBuildHeight())) {
+    protected void customServerAiStep(ServerLevel serverLevel) {
+        super.customServerAiStep(serverLevel);
+        if (!(this.targetPosition == null || this.level().isEmptyBlock(this.targetPosition) && this.targetPosition.getY() > this.level().getMinY())) {
             this.targetPosition = null;
         }
         if (this.getHoverTicks() > 0) {
             this.setHoverTicks(Math.max(0, this.getHoverTicks() - 1));
         } else if (this.targetPosition == null || this.targetPosition.closerToCenterThan(this.position(), 2.0)) {
-            Vec3 randomPos = RandomPos.generateRandomPos(this, () -> new BlockPos(
+            this.targetPosition = new BlockPos(
                     (int)(this.getX() + this.random.nextInt(7) - this.random.nextInt(7)),
                     (int)(this.getY() + this.random.nextInt(6) - 2.0),
                     (int)(this.getZ() + this.random.nextInt(7) - this.random.nextInt(7))
-            ));
-            Vec3i randomPos2 = new Vec3i((int)randomPos.x, (int)randomPos.y, (int)randomPos.z);
-            this.targetPosition = new BlockPos(randomPos2);
+            );
             this.setHoverTicks(15);
         }
         if (this.targetPosition != null && this.getHoverTicks() <= 0) {
@@ -160,7 +158,7 @@ public class Dragonfly extends PathfinderMob implements NaturalistGeoEntity {
         return Entity.MovementEmission.EVENTS;
     }
 
-    public boolean causeFallDamage(float fallDistance, float multiplier, DamageSource source) {
+    public boolean causeFallDamage(double fallDistance, float multiplier, DamageSource source) {
         return false;
     }
 
@@ -188,21 +186,21 @@ public class Dragonfly extends PathfinderMob implements NaturalistGeoEntity {
     protected @NotNull InteractionResult mobInteract(Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (stack.is(Items.CHORUS_FRUIT)) {
-            this.playSound(SoundEvents.GENERIC_EAT);
+            this.playSound(SoundEvents.GENERIC_EAT.value());
             if (!player.getAbilities().instabuild) {
                 stack.shrink(1);
             }
-            if (!this.level().isClientSide) {
+            if (!this.level().isClientSide()) {
                 AreaEffectCloud areaEffectCloud = new AreaEffectCloud(this.level(), this.getX(), this.getY(), this.getZ());
                 areaEffectCloud.setOwner(this);
-                areaEffectCloud.setParticle(ParticleTypes.DRAGON_BREATH);
+                areaEffectCloud.setCustomParticle(net.minecraft.core.particles.PowerParticleOption.create(ParticleTypes.DRAGON_BREATH, 1.0f));
                 areaEffectCloud.setRadius(0.5f);
                 areaEffectCloud.setDuration(200);
-                areaEffectCloud.addEffect(new MobEffectInstance(MobEffects.HARM, 1, 1));
+                areaEffectCloud.addEffect(new MobEffectInstance(MobEffects.INSTANT_DAMAGE, 1, 1));
                 areaEffectCloud.setPos(this.getX(), this.getY(), this.getZ());
                 this.level().addFreshEntity(areaEffectCloud);
             }
-            return InteractionResult.sidedSuccess(this.level().isClientSide);
+            return InteractionResult.SUCCESS;
         }
         return super.mobInteract(player , hand);
     }
@@ -216,14 +214,14 @@ public class Dragonfly extends PathfinderMob implements NaturalistGeoEntity {
         return this.geoCache;
     }
 
-    protected <E extends Dragonfly> PlayState predicate(final AnimationState<E> event) {
-        event.getController().setAnimation(FLY);
+    protected PlayState predicate(final AnimationTest<Dragonfly> event) {
+        event.setAnimation(FLY);
         return PlayState.CONTINUE;
     }
 
     @Override
     public void registerControllers(final AnimatableManager.@NotNull ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 0, this::predicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 0, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
     }
 
 }

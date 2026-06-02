@@ -15,7 +15,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
@@ -42,20 +42,21 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.core.BlockPos;
 import net.minecraft.sounds.SoundEvent;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.state.AnimationTest;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
-import java.util.UUID;
 
 public class Mammoth extends NaturalistAnimal implements NeutralMob, NaturalistGeoEntity, ContainerListener, MenuProvider {
     protected static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.sf_nba.mammoth.idle");
@@ -67,7 +68,7 @@ public class Mammoth extends NaturalistAnimal implements NeutralMob, NaturalistG
     private static final EntityDataAccessor<Boolean> SADDLED = SynchedEntityData.defineId(Mammoth.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> HAS_CHEST = SynchedEntityData.defineId(Mammoth.class, EntityDataSerializers.BOOLEAN);
     @Nullable
-    private UUID persistentAngerTarget;
+    private EntityReference<LivingEntity> persistentAngerTarget;
     private SimpleContainer inventory;
 
     public Mammoth(EntityType<? extends NaturalistAnimal> entityType, Level level) {
@@ -157,7 +158,7 @@ public class Mammoth extends NaturalistAnimal implements NeutralMob, NaturalistG
     }
 
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, @Nullable SpawnGroupData spawnData) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, EntitySpawnReason reason, @Nullable SpawnGroupData spawnData) {
         AgeableMobGroupData ageableMobGroupData;
         if (spawnData == null) {
             spawnData = new AgeableMobGroupData(true);
@@ -167,7 +168,7 @@ public class Mammoth extends NaturalistAnimal implements NeutralMob, NaturalistG
         }
         ageableMobGroupData.increaseGroupSizeByOne();
         RandomSource random = level.getRandom();
-        this.getAttribute(Attributes.FOLLOW_RANGE).addPermanentModifier(new AttributeModifier(ResourceLocation.fromNamespaceAndPath("naturalist", "random_spawn_bonus"), random.triangle(0.0, 0.11485000000000001), AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+        this.getAttribute(Attributes.FOLLOW_RANGE).addPermanentModifier(new AttributeModifier(Identifier.fromNamespaceAndPath("naturalist", "random_spawn_bonus"), random.triangle(0.0, 0.11485000000000001), AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
         return spawnData;
     }
 
@@ -179,7 +180,7 @@ public class Mammoth extends NaturalistAnimal implements NeutralMob, NaturalistG
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel serverLevel, AgeableMob ageableMob) {
-        return NaturalistEntityTypes.MAMMOTH.get().create(serverLevel);
+        return NaturalistEntityTypes.MAMMOTH.get().create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Override
@@ -230,8 +231,8 @@ public class Mammoth extends NaturalistAnimal implements NeutralMob, NaturalistG
                 stack.shrink(1);
             }
             this.setSaddled(true);
-            this.playSound(SoundEvents.HORSE_SADDLE, 1.0f, 1.0f);
-            return InteractionResult.sidedSuccess(this.level().isClientSide);
+            this.playSound(SoundEvents.HORSE_SADDLE.value(), 1.0f, 1.0f);
+            return InteractionResult.SUCCESS;
         }
 
         // Add chest
@@ -241,23 +242,23 @@ public class Mammoth extends NaturalistAnimal implements NeutralMob, NaturalistG
             }
             this.setHasChest(true);
             this.playSound(SoundEvents.MULE_CHEST, 1.0f, (this.random.nextFloat() - this.random.nextFloat()) * 0.2f + 1.0f);
-            return InteractionResult.sidedSuccess(this.level().isClientSide);
+            return InteractionResult.SUCCESS;
         }
 
         // Open inventory (shift-click when has chest)
         if (this.hasChest() && player.isSecondaryUseActive()) {
-            if (!this.level().isClientSide) {
+            if (!this.level().isClientSide()) {
                 this.openCustomInventoryScreen(player);
             }
-            return InteractionResult.sidedSuccess(this.level().isClientSide);
+            return InteractionResult.SUCCESS;
         }
 
         // Mount (when saddled, empty hand or non-special item)
         if (this.isSaddled() && !this.isVehicle()) {
-            if (!this.level().isClientSide) {
+            if (!this.level().isClientSide()) {
                 player.startRiding(this);
             }
-            return InteractionResult.sidedSuccess(this.level().isClientSide);
+            return InteractionResult.SUCCESS;
         }
 
         return super.mobInteract(player, hand);
@@ -314,8 +315,8 @@ public class Mammoth extends NaturalistAnimal implements NeutralMob, NaturalistG
     }
 
     @Override
-    public void customServerAiStep() {
-        super.customServerAiStep();
+    protected void customServerAiStep(ServerLevel serverLevel) {
+        super.customServerAiStep(serverLevel);
         if (this.getControllingPassenger() == null) {
             if (this.getMoveControl().hasWanted()) {
                 this.setSprinting(this.getMoveControl().getSpeedModifier() >= 1.2D);
@@ -330,11 +331,11 @@ public class Mammoth extends NaturalistAnimal implements NeutralMob, NaturalistG
     // region COMBAT
 
     @Override
-    public boolean doHurtTarget(Entity target) {
-        boolean shouldHurt = target.hurt(target.damageSources().mobAttack(this), (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE));
+    public boolean doHurtTarget(ServerLevel serverLevel, Entity target) {
+        boolean shouldHurt = super.doHurtTarget(serverLevel, target);
         if (shouldHurt && target instanceof LivingEntity livingEntity) {
             Vec3 knockbackDirection = new Vec3(this.blockPosition().getX() - target.getX(), 0.0, this.blockPosition().getZ() - target.getZ()).normalize();
-            float shieldBlockModifier = livingEntity.isDamageSourceBlocked(target.damageSources().mobAttack(this)) ? 0.5f : 1.0f;
+            float shieldBlockModifier = livingEntity.isBlocking() ? 0.5f : 1.0f;
             livingEntity.knockback(shieldBlockModifier * 3.0D, knockbackDirection.x(), knockbackDirection.z());
             double knockbackResistance = Math.max(0.0, 1.0 - livingEntity.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE));
             livingEntity.setDeltaMovement(livingEntity.getDeltaMovement().add(0.0, 0.5f * knockbackResistance, 0.0));
@@ -356,56 +357,48 @@ public class Mammoth extends NaturalistAnimal implements NeutralMob, NaturalistG
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag compound) {
-        super.addAdditionalSaveData(compound);
-        this.addPersistentAngerSaveData(compound);
-        compound.putBoolean("Saddled", this.isSaddled());
-        compound.putBoolean("HasChest", this.hasChest());
+    protected void addAdditionalSaveData(ValueOutput view) {
+        super.addAdditionalSaveData(view);
+        this.addPersistentAngerSaveData(view);
+        view.putBoolean("Saddled", this.isSaddled());
+        view.putBoolean("HasChest", this.hasChest());
         if (this.hasChest()) {
-            ListTag items = new ListTag();
+            NonNullList<ItemStack> items = NonNullList.withSize(this.inventory.getContainerSize(), ItemStack.EMPTY);
             for (int i = 0; i < this.inventory.getContainerSize(); i++) {
-                ItemStack stack = this.inventory.getItem(i);
-                if (!stack.isEmpty()) {
-                    CompoundTag itemTag = new CompoundTag();
-                    itemTag.putByte("Slot", (byte) i);
-                    items.add(stack.save(this.registryAccess(), itemTag));
-                }
+                items.set(i, this.inventory.getItem(i));
             }
-            compound.put("Items", items);
+            net.minecraft.world.ContainerHelper.saveAllItems(view, items);
         }
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag compound) {
-        super.readAdditionalSaveData(compound);
-        this.readPersistentAngerSaveData(this.level(), compound);
-        this.setSaddled(compound.getBoolean("Saddled"));
-        this.setHasChest(compound.getBoolean("HasChest"));
+    protected void readAdditionalSaveData(ValueInput view) {
+        super.readAdditionalSaveData(view);
+        this.readPersistentAngerSaveData(this.level(), view);
+        this.setSaddled(view.getBooleanOr("Saddled", false));
+        this.setHasChest(view.getBooleanOr("HasChest", false));
         if (this.hasChest()) {
-            ListTag items = compound.getList("Items", 10);
             this.createInventory();
+            NonNullList<ItemStack> items = NonNullList.withSize(this.inventory.getContainerSize(), ItemStack.EMPTY);
+            net.minecraft.world.ContainerHelper.loadAllItems(view, items);
             for (int i = 0; i < items.size(); i++) {
-                CompoundTag itemTag = items.getCompound(i);
-                int slot = itemTag.getByte("Slot") & 255;
-                if (slot < this.inventory.getContainerSize()) {
-                    this.inventory.setItem(slot, ItemStack.parse(this.registryAccess(), itemTag).orElse(ItemStack.EMPTY));
-                }
+                this.inventory.setItem(i, items.get(i));
             }
         }
     }
 
     @Override
-    protected void dropEquipment() {
-        super.dropEquipment();
+    protected void dropEquipment(ServerLevel serverLevel) {
+        super.dropEquipment(serverLevel);
         if (this.isSaddled()) {
-            this.spawnAtLocation(Items.SADDLE);
+            this.spawnAtLocation(serverLevel, new ItemStack(Items.SADDLE));
         }
         if (this.hasChest()) {
-            this.spawnAtLocation(Items.CHEST);
+            this.spawnAtLocation(serverLevel, new ItemStack(Items.CHEST));
             for (int i = 0; i < this.inventory.getContainerSize(); i++) {
                 ItemStack stack = this.inventory.getItem(i);
                 if (!stack.isEmpty()) {
-                    this.spawnAtLocation(stack);
+                    this.spawnAtLocation(serverLevel, stack);
                 }
             }
         }
@@ -451,34 +444,34 @@ public class Mammoth extends NaturalistAnimal implements NeutralMob, NaturalistG
     @Override
     public void aiStep() {
         super.aiStep();
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide()) {
             this.updatePersistentAnger((ServerLevel) this.level(), true);
         }
     }
 
     @Override
     public void startPersistentAngerTimer() {
-        this.setRemainingPersistentAngerTime(PERSISTENT_ANGER_TIME.sample(this.random));
+        this.setTimeToRemainAngry(PERSISTENT_ANGER_TIME.sample(this.random));
     }
 
     @Override
-    public void setRemainingPersistentAngerTime(int pTime) {
-        this.entityData.set(REMAINING_ANGER_TIME, pTime);
+    public void setPersistentAngerEndTime(long pTime) {
+        this.entityData.set(REMAINING_ANGER_TIME, (int) pTime);
     }
 
     @Override
-    public int getRemainingPersistentAngerTime() {
+    public long getPersistentAngerEndTime() {
         return this.entityData.get(REMAINING_ANGER_TIME);
     }
 
     @Override
-    public void setPersistentAngerTarget(@Nullable UUID pTarget) {
+    public void setPersistentAngerTarget(@Nullable EntityReference<LivingEntity> pTarget) {
         this.persistentAngerTarget = pTarget;
     }
 
     @Nullable
     @Override
-    public UUID getPersistentAngerTarget() {
+    public EntityReference<LivingEntity> getPersistentAngerTarget() {
         return this.persistentAngerTarget;
     }
 
@@ -491,26 +484,27 @@ public class Mammoth extends NaturalistAnimal implements NeutralMob, NaturalistG
         return this.geoCache;
     }
 
-    private <E extends Mammoth> @NotNull PlayState predicate(final AnimationState<E> event) {
+    private @NotNull PlayState predicate(final AnimationTest<Mammoth> event) {
         if (this.isBaby() || this.getTarget() != null) {
-            event.setControllerSpeed(1.3f + event.getLimbSwingAmount());
+            event.setControllerSpeed((float)(0.52F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
         }
         if (event.isMoving()) {
             if (this.isSprinting()) {
-                event.getController().setAnimation(RUN);
+                event.controller().setAnimation(RUN);
             } else {
-                event.getController().setAnimation(WALK);
+                event.controller().setAnimation(WALK);
             }
         } else {
-            event.getController().setAnimation(IDLE);
+            event.controller().setAnimation(IDLE);
         }
         return PlayState.CONTINUE;
     }
 
-    private <E extends Mammoth> PlayState swingPredicate(final @NotNull AnimationState<E> event) {
-        if (this.swinging && event.getController().getAnimationState().equals(AnimationController.State.STOPPED)) {
-            event.getController().forceAnimationReset();
-            event.getController().setAnimation(RawAnimation.begin().thenPlay("animation.sf_nba.mammoth.swing"));
+    private PlayState swingPredicate(final @NotNull AnimationTest<Mammoth> event) {
+        if (this.swinging && event.controller().getPlayState() == PlayState.STOP) {
+            event.controller().reset();
+            
+            event.controller().setAnimation(RawAnimation.begin().thenPlay("animation.sf_nba.mammoth.swing"));
             this.swinging = false;
         }
         return PlayState.CONTINUE;
@@ -518,8 +512,8 @@ public class Mammoth extends NaturalistAnimal implements NeutralMob, NaturalistG
 
     @Override
     public void registerControllers(final AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 5, this::predicate).setSoundKeyframeHandler(event -> {}));
-        controllers.add(new AnimationController<>(this, "swingController", 0, this::swingPredicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("swingController", 0, this::swingPredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
     }
 
     // endregion

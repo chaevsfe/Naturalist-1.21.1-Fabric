@@ -504,25 +504,28 @@ public class Bear extends NaturalistAnimal implements NeutralMob, NaturalistGeoE
     protected <E extends Bear> PlayState predicate(final AnimationState<E> event) {
         if (this.isSleeping()) {
             event.getController().setAnimation(SLEEP);
+            event.getController().setAnimationSpeed(0.75D);
             return PlayState.CONTINUE;
         } else if (this.isSitting()) {
             event.getController().setAnimation(SIT);
+            event.getController().setAnimationSpeed(0.75D);
             return PlayState.CONTINUE;
         } else if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
             if (this.isSprinting()) {
                 event.getController().setAnimation(RUN);
-                event.getController().setAnimationSpeed(2.0D);
+                event.getController().setAnimationSpeed(1.5D);
                 return PlayState.CONTINUE;
             } else {
                 event.getController().setAnimation(WALK);
-                event.getController().setAnimationSpeed(1.4D);
+                event.getController().setAnimationSpeed(1.05D);
                 return PlayState.CONTINUE;
             }
         } else {
             event.getController().setAnimation(IDLE);
+            event.getController().setAnimationSpeed(0.75D);
         }
         event.getController().forceAnimationReset();
-        
+
         return PlayState.STOP;
     }
 
@@ -532,7 +535,6 @@ public class Bear extends NaturalistAnimal implements NeutralMob, NaturalistGeoE
             return PlayState.CONTINUE;
         }
         event.getController().forceAnimationReset();
-        
         return PlayState.STOP;
     }
 
@@ -540,7 +542,7 @@ public class Bear extends NaturalistAnimal implements NeutralMob, NaturalistGeoE
         if (this.swinging && event.getController().getAnimationState().equals(AnimationController.State.STOPPED)) {
             event.getController().forceAnimationReset();
 
-            event.getController().setAnimationSpeed(1.3F);
+            event.getController().setAnimationSpeed(2.0F);
             event.setAnimation(ATTACK);
 
             this.swinging = false;
@@ -551,10 +553,11 @@ public class Bear extends NaturalistAnimal implements NeutralMob, NaturalistGeoE
     protected <E extends Bear> @NotNull PlayState eatPredicate(final AnimationState<E> event) {
         if (this.isEating()) {
             event.getController().setAnimation(EAT);
+            event.getController().setAnimationSpeed(1.5D);
             return PlayState.CONTINUE;
         }
         event.getController().forceAnimationReset();
-        
+
         return PlayState.STOP;
     }
 

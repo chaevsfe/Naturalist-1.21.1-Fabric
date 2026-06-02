@@ -36,7 +36,7 @@ public class LookAtLivingEntityGoal extends Goal {
 
         this.lookAtContext = TargetingConditions.forNonCombat()
                 .range(lookDistance)
-                .selector(entity -> entity instanceof LivingEntity && entity != mob);
+                .selector((entity, level) -> entity instanceof LivingEntity && entity != mob);
     }
 
     @Override
@@ -45,13 +45,15 @@ public class LookAtLivingEntityGoal extends Goal {
             return false;
         }
 
-        this.lookAt = this.mob.level().getNearestEntity(
-                this.mob.level().getEntitiesOfClass(LivingEntity.class, this.mob.getBoundingBox().inflate(this.lookDistance), entity -> true),
+        if (!(this.mob.level() instanceof net.minecraft.server.level.ServerLevel sl)) return false;
+        this.lookAt = sl.getNearestEntity(
+                LivingEntity.class,
                 this.lookAtContext,
                 this.mob,
                 this.mob.getX(),
                 this.mob.getEyeY(),
-                this.mob.getZ()
+                this.mob.getZ(),
+                this.mob.getBoundingBox().inflate(this.lookDistance)
         );
 
         return this.lookAt != null;

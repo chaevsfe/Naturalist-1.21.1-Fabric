@@ -51,8 +51,8 @@ public class SnakeModel extends GeoModel<Snake> {
         CoreGeoBone tail4 = this.getAnimationProcessor().getBone("tail4");
 
         if (!entity.isSleeping()) {
-            head.setRotX(extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
-            head.setRotY(extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
+            head.setRotX(-extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
+            head.setRotY(-extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
         }
         if (!entity.getMainHandItem().isEmpty()) {
             tail2.setScaleX(1.5F);

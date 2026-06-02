@@ -9,7 +9,6 @@ import com.starfish_studios.naturalist.core.registry.NaturalistEntityTypes;
 import com.starfish_studios.naturalist.core.registry.NaturalistSoundEvents;
 import com.starfish_studios.naturalist.core.registry.NaturalistTags;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
@@ -30,30 +29,28 @@ import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.monster.Zoglin;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
-import java.util.UUID;
 import java.util.function.Predicate;
 
 public class Boar extends NaturalistAnimal implements NeutralMob, NaturalistGeoEntity {
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
-    private static final Ingredient FOOD_ITEMS = Ingredient.of(NaturalistTags.ItemTags.BOAR_FOOD_ITEMS);
+    private static final Predicate<ItemStack> FOOD_ITEMS = (stack) -> stack.is(NaturalistTags.ItemTags.BOAR_FOOD_ITEMS);
     private static final UniformInt PERSISTENT_ANGER_TIME = TimeUtil.rangeOfSeconds(20, 39);
-    private int remainingPersistentAngerTime;
+    private long persistentAngerEndTime;
     @Nullable
-    private UUID persistentAngerTarget;
+    private EntityReference<LivingEntity> persistentAngerTarget;
 
     protected static final RawAnimation IDLE = RawAnimation.begin().thenLoop("animation.sf_nba.boar.idle");
     protected static final RawAnimation WALK = RawAnimation.begin().thenLoop("animation.sf_nba.boar.walk");
@@ -76,13 +73,13 @@ public class Boar extends NaturalistAnimal implements NeutralMob, NaturalistGeoE
     }
 
     public static AttributeSupplier.Builder createAttributes() {
-        return Mob.createMobAttributes().add(Attributes.MAX_HEALTH, 14.0).add(Attributes.MOVEMENT_SPEED, 0.2).add(Attributes.ATTACK_DAMAGE, 1.0D);
+        return Mob.createMobAttributes().add(Attributes.MAX_HEALTH, 14.0).add(Attributes.TEMPT_RANGE, 10).add(Attributes.MOVEMENT_SPEED, 0.2).add(Attributes.ATTACK_DAMAGE, 1.0D);
     }
 
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(@NotNull ServerLevel level, @NotNull AgeableMob otherParent) {
-        return NaturalistEntityTypes.BOAR.get().create(level);
+        return NaturalistEntityTypes.BOAR.get().create(level, EntitySpawnReason.BREEDING);
     }
 
     @Override
@@ -114,7 +111,7 @@ public class Boar extends NaturalistAnimal implements NeutralMob, NaturalistGeoE
     @Override
     public void aiStep() {
         super.aiStep();
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide()) {
             if (!this.isAggro()) {
                 this.stopBeingAngry();
             }
@@ -123,7 +120,7 @@ public class Boar extends NaturalistAnimal implements NeutralMob, NaturalistGeoE
     }
 
     @Override
-    public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor pLevel, @NotNull DifficultyInstance pDifficulty, @NotNull MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData) {
+    public SpawnGroupData finalizeSpawn(@NotNull ServerLevelAccessor pLevel, @NotNull DifficultyInstance pDifficulty, @NotNull EntitySpawnReason pReason, @Nullable SpawnGroupData pSpawnData) {
         super.finalizeSpawn(pLevel, pDifficulty, pReason, pSpawnData);
 
         /// Spawn Testing (saving for the future)
@@ -134,8 +131,8 @@ public class Boar extends NaturalistAnimal implements NeutralMob, NaturalistGeoE
     }
 
     @Override
-    public void customServerAiStep() {
-        super.customServerAiStep();
+    protected void customServerAiStep(ServerLevel serverLevel) {
+        super.customServerAiStep(serverLevel);
         if (this.getMoveControl().hasWanted()) {
             this.setSprinting(this.getMoveControl().getSpeedModifier() >= 1.2D);
         } else {
@@ -175,9 +172,9 @@ public class Boar extends NaturalistAnimal implements NeutralMob, NaturalistGeoE
     public void thunderHit(@NotNull ServerLevel level, @NotNull LightningBolt lightning) {
         super.thunderHit(level, lightning);
         if (level.getDifficulty() != Difficulty.PEACEFUL) {
-            Zoglin zoglin = EntityType.ZOGLIN.create(level);
+            Zoglin zoglin = EntityType.ZOGLIN.create(level, EntitySpawnReason.CONVERSION);
             assert zoglin != null;
-            zoglin.moveTo(this.getX(), this.getY(), this.getZ(), this.getYRot(), this.getXRot());
+            zoglin.snapTo(this.getX(), this.getY(), this.getZ(), this.getYRot(), this.getXRot());
             zoglin.setNoAi(this.isNoAi());
             zoglin.setBaby(this.isBaby());
             if (this.hasCustomName()) {
@@ -192,45 +189,45 @@ public class Boar extends NaturalistAnimal implements NeutralMob, NaturalistGeoE
 
     @Override
     public void startPersistentAngerTimer() {
-        this.setRemainingPersistentAngerTime(PERSISTENT_ANGER_TIME.sample(this.random));
+        this.setTimeToRemainAngry(PERSISTENT_ANGER_TIME.sample(this.random));
     }
 
     @Override
-    public void setRemainingPersistentAngerTime(int remainingPersistentAngerTime) {
-        this.remainingPersistentAngerTime = remainingPersistentAngerTime;
+    public void setPersistentAngerEndTime(long persistentAngerEndTime) {
+        this.persistentAngerEndTime = persistentAngerEndTime;
     }
 
     @Override
-    public int getRemainingPersistentAngerTime() {
-        return this.remainingPersistentAngerTime;
+    public long getPersistentAngerEndTime() {
+        return this.persistentAngerEndTime;
     }
 
     @Override
-    public void setPersistentAngerTarget(@Nullable UUID persistentAngerTarget) {
+    public void setPersistentAngerTarget(@Nullable EntityReference<LivingEntity> persistentAngerTarget) {
         this.persistentAngerTarget = persistentAngerTarget;
     }
 
     @Override
     @Nullable
-    public UUID getPersistentAngerTarget() {
+    public EntityReference<LivingEntity> getPersistentAngerTarget() {
         return this.persistentAngerTarget;
     }
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return this.geoCache;
     }
-    protected <E extends Boar> PlayState predicate(final @NotNull AnimationState<E> event) {
+    protected PlayState predicate(final @NotNull AnimationTest<Boar> event) {
         if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
             if (this.isSprinting()) {
-                event.getController().setAnimation(RUN);
-                event.getController().setAnimationSpeed(2.0D);
+                event.setAnimation(RUN);
+                event.setControllerSpeed((float)(0.8F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
             } else {
-                event.getController().setAnimation(WALK);
-                event.getController().setAnimationSpeed(1.5D);
+                event.setAnimation(WALK);
+                event.setControllerSpeed((float)(0.6F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
             }
         } else {
-            event.getController().setAnimation(IDLE);
-            event.getController().setAnimationSpeed(1.0D);
+            event.setAnimation(IDLE);
+            event.setControllerSpeed((float)(0.4F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
         }
         return PlayState.CONTINUE;
     }
@@ -238,7 +235,7 @@ public class Boar extends NaturalistAnimal implements NeutralMob, NaturalistGeoE
     @Override
     public void registerControllers(final AnimatableManager.ControllerRegistrar controllers) {
         // data.setResetSpeedInTicks(10);
-        controllers.add(new AnimationController<>(this, "controller", 10, this::predicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 10, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
     }
 
     static class BoarMeleeAttackGoal extends MeleeAttackGoal {

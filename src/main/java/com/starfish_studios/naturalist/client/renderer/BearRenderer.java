@@ -1,30 +1,39 @@
 package com.starfish_studios.naturalist.client.renderer;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.starfish_studios.naturalist.Naturalist;
 import com.starfish_studios.naturalist.client.model.BearModel;
 import com.starfish_studios.naturalist.client.renderer.layers.BearShearedLayer;
-import com.starfish_studios.naturalist.common.entity.Alligator;
+import com.starfish_studios.naturalist.client.renderer.layers.HeldItemLayer;
 import com.starfish_studios.naturalist.common.entity.Bear;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.item.ItemDisplayContext;
-import org.jetbrains.annotations.NotNull;
-import org.joml.Quaternionf;
-import software.bernie.geckolib.cache.object.GeoBone;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.resources.Identifier;
+import net.minecraft.util.Mth;
+import net.minecraft.world.item.Items;
+import software.bernie.geckolib.constant.DataTickets;
+import software.bernie.geckolib.constant.dataticket.DataTicket;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
+import software.bernie.geckolib.renderer.base.BoneSnapshots;
+import software.bernie.geckolib.renderer.base.GeoRenderState;
+import software.bernie.geckolib.renderer.base.RenderPassInfo;
 
 @Environment(EnvType.CLIENT)
-public class BearRenderer extends GeoEntityRenderer<Bear> {
+public class BearRenderer<R extends LivingEntityRenderState & GeoRenderState> extends GeoEntityRenderer<Bear, R> {
+    public static final DataTicket<Boolean> IS_BABY = DataTicket.create("bear_is_baby", Boolean.class);
+    public static final DataTicket<Boolean> BEAR_SKIP_HEAD = DataTicket.create("bear_skip_head", Boolean.class);
+    private static final Identifier BEAR_TEXTURE = Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/bear/bear.png");
+    private static final Identifier BEAR_ANGRY_TEXTURE = Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/bear/bear_angry.png");
+    private static final Identifier BEAR_SLEEP_TEXTURE = Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/bear/bear_sleep.png");
+    private static final Identifier BEAR_BERRIES_TEXTURE = Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/bear/bear_berries.png");
+    private static final Identifier BEAR_HONEY_TEXTURE = Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/bear/bear_honey.png");
+
     public BearRenderer(EntityRendererProvider.Context renderManager) {
         super(renderManager, new BearModel());
         this.shadowRadius = 0.9F;
-        this.addRenderLayer(new BearShearedLayer(this));
+        this.withRenderLayer(new BearShearedLayer(this));
+        this.withRenderLayer(new HeldItemLayer<>(this, "snout"));
     }
 
     @Override
@@ -33,27 +42,56 @@ public class BearRenderer extends GeoEntityRenderer<Bear> {
     }
 
     @Override
-    public void render(@NotNull Bear entity, float entityYaw, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight) {
-        if (entity.isBaby()) {
-            poseStack.scale(0.5F, 0.5F, 0.5F);
+    public void extractRenderState(Bear entity, R renderState, float partialTick) {
+        super.extractRenderState(entity, renderState, partialTick);
+        Identifier texture;
+        if (entity.isAngry()) {
+            texture = BEAR_ANGRY_TEXTURE;
+        } else if (entity.isSleeping()) {
+            texture = BEAR_SLEEP_TEXTURE;
+        } else if (entity.isEating()) {
+            if (entity.getMainHandItem().is(Items.SWEET_BERRIES)) {
+                texture = BEAR_BERRIES_TEXTURE;
+            } else if (entity.getMainHandItem().is(Items.HONEYCOMB)) {
+                texture = BEAR_HONEY_TEXTURE;
+            } else {
+                texture = BEAR_TEXTURE;
+            }
+        } else {
+            texture = BEAR_TEXTURE;
         }
-        else {
-            poseStack.scale(1.0F, 1.0F, 1.0F);
-        }
-        super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
+        renderState.addGeckolibData(BearModel.BEAR_TEXTURE, texture);
+        renderState.addGeckolibData(IS_BABY, entity.isBaby());
+        renderState.addGeckolibData(BEAR_SKIP_HEAD, entity.isSleeping() || entity.isEating() || entity.isSitting());
     }
 
     @Override
-    public void renderRecursively(PoseStack stack, Bear entity, GeoBone bone, RenderType renderType, MultiBufferSource bufferSource, VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight,
-        int packedOverlay, int colour) {
-        if (bone.getName().equals("snout")) {
-            stack.pushPose();
-            stack.mulPose(new Quaternionf(-0.7071f, 0.0f, 0.0f, 0.7071f));
-            stack.translate(0.0D, 1.3D, 0.8D);
-            Minecraft.getInstance().getItemRenderer().renderStatic(entity.getItemBySlot(EquipmentSlot.MAINHAND), ItemDisplayContext.THIRD_PERSON_RIGHT_HAND, packedLight, packedOverlay, stack, bufferSource, entity.level(), 0);
-            stack.popPose();
-            buffer = bufferSource.getBuffer(RenderType.entityTranslucent(getTextureLocation(entity)));
+    public void scaleModelForRender(RenderPassInfo<R> renderPassInfo, float widthScale, float heightScale) {
+        Boolean baby = renderPassInfo.renderState().getGeckolibData(IS_BABY);
+        if (baby != null && baby) {
+            super.scaleModelForRender(renderPassInfo, 0.5f, 0.5f);
+        } else {
+            super.scaleModelForRender(renderPassInfo, widthScale, heightScale);
         }
-        super.renderRecursively(stack, entity, bone, renderType, bufferSource, buffer, isReRender, partialTick, packedLight, packedOverlay, colour);
+    }
+
+    @Override
+    public void adjustModelBonesForRender(RenderPassInfo<R> renderPassInfo, BoneSnapshots boneSnapshots) {
+        super.adjustModelBonesForRender(renderPassInfo, boneSnapshots);
+        Boolean baby = renderPassInfo.renderState().getGeckolibData(IS_BABY);
+        if (baby != null && baby) {
+            boneSnapshots.ifPresent("head", snapshot -> snapshot.setScale(1.8f, 1.8f, 1.8f));
+        }
+
+        // Head tracking (skip when sleeping, eating, or sitting)
+        Boolean skipHead = renderPassInfo.renderState().getGeckolibData(BEAR_SKIP_HEAD);
+        if (skipHead == null || !skipHead) {
+            float pitch = renderPassInfo.getOrDefaultGeckolibData(DataTickets.ENTITY_PITCH, 0f);
+            float yaw = renderPassInfo.getOrDefaultGeckolibData(DataTickets.ENTITY_YAW, 0f);
+            boneSnapshots.ifPresent("head", snapshot -> {
+                snapshot.setRotX(-pitch * Mth.DEG_TO_RAD);
+                snapshot.setRotY(-yaw * Mth.DEG_TO_RAD);
+            });
+        }
     }
 }

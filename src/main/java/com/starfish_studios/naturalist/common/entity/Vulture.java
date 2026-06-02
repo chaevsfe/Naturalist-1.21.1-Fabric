@@ -35,7 +35,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
-import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
@@ -46,11 +46,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import com.starfish_studios.naturalist.common.entity.core.NaturalistGeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.EnumSet;
@@ -58,7 +58,7 @@ import java.util.List;
 
 public class Vulture extends PathfinderMob implements NaturalistGeoEntity, FlyingAnimal {
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
-    private static final Ingredient FOOD_ITEMS = Ingredient.of(Items.ROTTEN_FLESH);
+    private static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> FOOD_ITEMS = (stack) -> stack.is(Items.ROTTEN_FLESH);
     private int ticksSinceEaten;
 
     protected static final RawAnimation FLY = RawAnimation.begin().thenLoop("animation.sf_nba.vulture.fly");
@@ -96,11 +96,11 @@ public class Vulture extends PathfinderMob implements NaturalistGeoEntity, Flyin
         this.goalSelector.addGoal(3, new HighAltitudeFlyingWanderGoal(this));
         this.goalSelector.addGoal(4, new LookAtPlayerGoal(this, Player.class, 8.0F));
         this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
-        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Monster.class, 10, false, false, entity -> entity.getType().is(NaturalistTags.EntityTypes.VULTURE_HOSTILES) && !FOOD_ITEMS.test(this.getMainHandItem())));
-        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, 10, false, false, entity -> entity.getHealth() <= 6 && !entity.getMainHandItem().isEmpty() && !FOOD_ITEMS.test(this.getMainHandItem())));
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, Monster.class, 10, false, false, (entity, level) -> entity.getType().is(NaturalistTags.EntityTypes.VULTURE_HOSTILES) && !FOOD_ITEMS.test(this.getMainHandItem())));
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, 10, false, false, (entity, level) -> entity.getHealth() <= 6 && !entity.getMainHandItem().isEmpty() && !FOOD_ITEMS.test(this.getMainHandItem())));
     }
 
-    public static boolean checkVultureSpawnRules(EntityType<Vulture> entityType, LevelAccessor state, MobSpawnType type, @NotNull BlockPos pos, RandomSource random) {
+    public static boolean checkVultureSpawnRules(EntityType<Vulture> entityType, LevelAccessor state, EntitySpawnReason type, @NotNull BlockPos pos, RandomSource random) {
         return state.getBlockState(pos.below()).is(NaturalistTags.BlockTags.VULTURES_SPAWNABLE_ON) && state.getRawBrightness(pos, 0) > 8;
     }
 
@@ -112,7 +112,7 @@ public class Vulture extends PathfinderMob implements NaturalistGeoEntity, Flyin
             for (EquipmentSlot slot : EquipmentSlot.values()) {
                 ItemStack itemStack = this.getItemBySlot(slot);
                 if (!itemStack.isEmpty()) {
-                    this.spawnAtLocation(itemStack);
+                    this.spawnAtLocation(serverLevel, itemStack);
                     this.setItemSlot(slot, ItemStack.EMPTY);
                 }
             }
@@ -126,7 +126,7 @@ public class Vulture extends PathfinderMob implements NaturalistGeoEntity, Flyin
     }
 
     @Override
-    public boolean causeFallDamage(float fallDistance, float multiplier, DamageSource source) {
+    public boolean causeFallDamage(double fallDistance, float multiplier, DamageSource source) {
         return false;
     }
 
@@ -170,21 +170,15 @@ public class Vulture extends PathfinderMob implements NaturalistGeoEntity, Flyin
     }
 
     @Override
-    public boolean isInvulnerableTo(DamageSource pSource) {
-        return pSource.equals(this.damageSources().cactus()) || super.isInvulnerableTo(pSource);
+    public boolean isInvulnerableTo(ServerLevel serverLevel, DamageSource pSource) {
+        return pSource.equals(this.damageSources().cactus()) || super.isInvulnerableTo(serverLevel, pSource);
     }
 
     @Override
-    public boolean doHurtTarget(Entity target) {
-        boolean shouldHurt;
-        float damage = (float)this.getAttributeValue(Attributes.ATTACK_DAMAGE);
-        float knockback = (float)this.getAttributeValue(Attributes.ATTACK_KNOCKBACK);
-        if (shouldHurt = target.hurt(target.damageSources().mobAttack(this), damage)) {
-            if (knockback > 0.0f && target instanceof LivingEntity) {
-                ((LivingEntity)target).knockback(knockback * 0.5f, Mth.sin(this.getYRot() * ((float)Math.PI / 180)), -Mth.cos(this.getYRot() * ((float)Math.PI / 180)));
-                this.setDeltaMovement(this.getDeltaMovement().multiply(0.6, 1.0, 0.6));
-            }
-            this.setLastHurtMob(target);
+    public boolean doHurtTarget(ServerLevel serverLevel, Entity target) {
+        boolean shouldHurt = super.doHurtTarget(serverLevel, target);
+        if (shouldHurt) {
+            this.setDeltaMovement(this.getDeltaMovement().multiply(0.6, 1.0, 0.6));
         }
         return shouldHurt;
     }
@@ -192,16 +186,14 @@ public class Vulture extends PathfinderMob implements NaturalistGeoEntity, Flyin
     @Override
     public void aiStep() {
         super.aiStep();
-        this.level().getProfiler().push("looting");
-        if (!this.level().isClientSide && this.canPickUpLoot() && this.isAlive() && !this.dead && this.level().getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)) {
+        if (!this.level().isClientSide() && this.canPickUpLoot() && this.isAlive() && !this.dead && this.level() instanceof ServerLevel sl && sl.getGameRules().get(GameRules.MOB_GRIEFING)) {
             for(ItemEntity itementity : this.level().getEntitiesOfClass(ItemEntity.class, this.getBoundingBox().inflate(1.0D, 1.0D, 1.0D))) {
-                if (!itementity.isRemoved() && !itementity.getItem().isEmpty() && this.wantsToPickUp(itementity.getItem())) {
-                    this.pickUpItem(itementity);
+                if (!itementity.isRemoved() && !itementity.getItem().isEmpty() && this.wantsToPickUp(sl, itementity.getItem())) {
+                    this.pickUpItem(sl, itementity);
                 }
             }
         }
-        this.level().getProfiler().pop();
-        if (!this.level().isClientSide && this.isAlive() && this.isEffectiveAi()) {
+        if (!this.level().isClientSide() && this.isAlive() && this.isEffectiveAi()) {
             ++this.ticksSinceEaten;
             ItemStack stack = this.getItemBySlot(EquipmentSlot.MAINHAND);
             if (stack.has(net.minecraft.core.component.DataComponents.FOOD)) {
@@ -212,7 +204,7 @@ public class Vulture extends PathfinderMob implements NaturalistGeoEntity, Flyin
                     }
                     this.ticksSinceEaten = 0;
                 } else if (this.ticksSinceEaten > 560 && this.random.nextFloat() < 0.1f) {
-                    this.playSound(this.getEatingSound(stack), 1.0f, 1.0f);
+                    this.playSound(SoundEvents.GENERIC_EAT.value(), 1.0f, 1.0f);
                     this.level().broadcastEntityEvent(this, (byte)45);
                 }
             }
@@ -233,7 +225,7 @@ public class Vulture extends PathfinderMob implements NaturalistGeoEntity, Flyin
         }
     }
 
-    @Override
+    // canTakeItem removed in 1.21.11
     public boolean canTakeItem(ItemStack pItemstack) {
         return !FOOD_ITEMS.test(this.getMainHandItem());
     }
@@ -244,7 +236,7 @@ public class Vulture extends PathfinderMob implements NaturalistGeoEntity, Flyin
     }
 
     @Override
-    protected void pickUpItem(ItemEntity pItemEntity) {
+    protected void pickUpItem(ServerLevel serverLevel, ItemEntity pItemEntity) {
         ItemStack itemstack = pItemEntity.getItem();
         if (this.canHoldItem(itemstack)) {
             if (!this.getMainHandItem().isEmpty() && !FOOD_ITEMS.test(this.getMainHandItem())) {
@@ -268,7 +260,6 @@ public class Vulture extends PathfinderMob implements NaturalistGeoEntity, Flyin
         VulturePathNavigation navigation = new VulturePathNavigation(this, pLevel);
         navigation.setCanOpenDoors(false);
         navigation.setCanFloat(true);
-        navigation.setCanPassDoors(true);
         return navigation;
     }
 
@@ -281,14 +272,14 @@ public class Vulture extends PathfinderMob implements NaturalistGeoEntity, Flyin
         return this.geoCache;
     }
 
-    private <E extends Vulture> PlayState predicate(final AnimationState<E> event) {
-        event.getController().setAnimation(FLY);
+    private PlayState predicate(final AnimationTest<Vulture> event) {
+        event.setAnimation(FLY);
         return PlayState.CONTINUE;
     }
 
     @Override
     public void registerControllers(final AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 5, this::predicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
     }
 
 
@@ -336,8 +327,8 @@ public class Vulture extends PathfinderMob implements NaturalistGeoEntity, Flyin
             if (this.canPerformAttack(enemy)) {
                 this.resetAttackCooldown();
                 this.mob.swing(InteractionHand.MAIN_HAND);
-                if (!(enemy instanceof Player)) {
-                    this.mob.doHurtTarget(enemy);
+                if (!(enemy instanceof Player) && this.mob.level() instanceof ServerLevel sl) {
+                    this.mob.doHurtTarget(sl, enemy);
                 }
                 if (enemy instanceof Player && this.mob.getMainHandItem().isEmpty() && !enemy.getMainHandItem().isEmpty()) {
                     this.mob.setItemSlot(EquipmentSlot.MAINHAND, enemy.getMainHandItem().split(1));
@@ -355,9 +346,9 @@ public class Vulture extends PathfinderMob implements NaturalistGeoEntity, Flyin
         private final double speedModifier;
         private final double horizontalSearchRange;
         private final double verticalSearchRange;
-        private final Ingredient ingredient;
+        private final java.util.function.Predicate<ItemStack> ingredient;
 
-        public VultureSearchForFoodGoal(Vulture mob, double speedModifier, Ingredient ingredient, double horizontalSearchRange, double verticalSearchRange) {
+        public VultureSearchForFoodGoal(Vulture mob, double speedModifier, java.util.function.Predicate<ItemStack> ingredient, double horizontalSearchRange, double verticalSearchRange) {
             this.setFlags(EnumSet.of(Flag.MOVE));
             this.mob = mob;
             this.speedModifier = speedModifier;
@@ -421,7 +412,7 @@ public class Vulture extends PathfinderMob implements NaturalistGeoEntity, Flyin
                 Level level = mob.level();
 
                 int groundY = level.getHeight(Heightmap.Types.WORLD_SURFACE, mobPos.getX(), mobPos.getZ());
-                int maxY = level.getMaxBuildHeight();
+                int maxY = level.getMaxY();
                 int minAltitude = groundY + MIN_ALTITUDE_ABOVE_GROUND;
                 int maxAltitude = Math.min(groundY + MAX_ALTITUDE_ABOVE_GROUND, maxY - ALTITUDE_MARGIN_FROM_BUILD_LIMIT);
                 preferredAltitude = Mth.nextInt(mob.getRandom(), minAltitude, maxAltitude);

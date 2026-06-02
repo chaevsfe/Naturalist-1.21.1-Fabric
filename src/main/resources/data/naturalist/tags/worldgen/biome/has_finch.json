@@ -7,7 +7,7 @@
       "required": false
     },
     {
-      "id": "#c:is_forest",
+      "id": "#c:forest",
       "required": false
     },
     {
@@ -15,7 +15,7 @@
       "required": false
     },
     {
-      "id": "#c:is_savanna",
+      "id": "#c:savanna",
       "required": false
     }
   ]

@@ -38,23 +38,26 @@ import net.minecraft.world.item.*;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.keyframe.event.SoundKeyframeEvent;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.state.KeyFrameEvent;
+import software.bernie.geckolib.cache.animation.keyframeevent.SoundKeyframeData;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 
 import java.util.*;
 
 public class Snail extends ClimbingAnimal implements NaturalistGeoEntity, Bucketable, HidingAnimal, EggLayingAnimal {
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
-    private static final Ingredient FOOD_ITEMS = Ingredient.of(Items.BEETROOT);
+    private static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> FOOD_ITEMS = (stack) -> stack.is(Items.BEETROOT);
     private static final EntityDataAccessor<Boolean> FROM_BUCKET;
     private static final EntityDataAccessor<Integer> DATA_COLOR;
     private static final EntityDataAccessor<Boolean> HAS_EGG;
@@ -104,8 +107,8 @@ public class Snail extends ClimbingAnimal implements NaturalistGeoEntity, Bucket
     }
 
     @Override
-    public boolean hurt(DamageSource source, float amount) {
-        return super.hurt(source, this.canHide() ? amount * 0.8F : amount);
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource source, float amount) {
+        return super.hurtServer(serverLevel, source, this.canHide() ? amount * 0.8F : amount);
     }
 
 
@@ -164,7 +167,7 @@ public class Snail extends ClimbingAnimal implements NaturalistGeoEntity, Bucket
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob mob) {
-        return NaturalistEntityTypes.SNAIL.get().create(level);
+        return NaturalistEntityTypes.SNAIL.get().create(level, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Override
@@ -221,19 +224,19 @@ public class Snail extends ClimbingAnimal implements NaturalistGeoEntity, Bucket
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag pCompound) {
-        super.addAdditionalSaveData(pCompound);
-        pCompound.putBoolean("FromBucket", this.fromBucket());
-        pCompound.putByte("Color", (byte)this.getSnailColor().getId());
-        pCompound.putBoolean("HasEgg", this.hasEgg());
+    protected void addAdditionalSaveData(ValueOutput view) {
+        super.addAdditionalSaveData(view);
+        view.putBoolean("FromBucket", this.fromBucket());
+        view.putByte("Color", (byte)this.getSnailColor().getId());
+        view.putBoolean("HasEgg", this.hasEgg());
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag pCompound) {
-        super.readAdditionalSaveData(pCompound);
-        this.setFromBucket(pCompound.getBoolean("FromBucket"));
-        this.setSnailColor(Color.BY_ID[pCompound.getInt("Color")]);
-        this.setHasEgg(pCompound.getBoolean("HasEgg"));
+    protected void readAdditionalSaveData(ValueInput view) {
+        super.readAdditionalSaveData(view);
+        this.setFromBucket(view.getBooleanOr("FromBucket", false));
+        this.setSnailColor(Color.BY_ID[view.getIntOr("Color", 0)]);
+        this.setHasEgg(view.getBooleanOr("HasEgg", false));
     }
 
 
@@ -330,12 +333,12 @@ public class Snail extends ClimbingAnimal implements NaturalistGeoEntity, Bucket
             ItemStack resultStack = ItemUtils.createFilledResult(stack, player, bucketStack, false);
             player.setItemInHand(hand, resultStack);
             Level level = entity.level();
-            if (!level.isClientSide) {
+            if (!level.isClientSide()) {
                 CriteriaTriggers.FILLED_BUCKET.trigger((ServerPlayer)player, bucketStack);
             }
 
             entity.discard();
-            return Optional.of(InteractionResult.sidedSuccess(level.isClientSide));
+            return Optional.of(InteractionResult.SUCCESS);
         } else {
             return Optional.empty();
         }
@@ -354,14 +357,11 @@ public class Snail extends ClimbingAnimal implements NaturalistGeoEntity, Bucket
     public void loadFromBucketTag(@NotNull CompoundTag tag) {
         Bucketable.loadDefaultDataFromBucketTag(this, tag);
 
-        if (tag.contains("Color", 3)) {
-            int i = tag.getInt("Color");
+        tag.getInt("Color").ifPresentOrElse(i -> {
             if (i >= 0 && i < Snail.Color.BY_ID.length) {
                 this.setSnailColor(Snail.Color.BY_ID[i]);
             }
-        } else {
-            this.setSnailColor(Snail.Color.BROWN);
-        }
+        }, () -> this.setSnailColor(Snail.Color.BROWN));
     }
 
     @Override
@@ -386,7 +386,8 @@ public class Snail extends ClimbingAnimal implements NaturalistGeoEntity, Bucket
 
     @Override
     public boolean canHide() {
-        List<Player> players = this.level().getNearbyPlayers(TargetingConditions.forNonCombat().range(5.0D).selector(EntitySelector.NO_CREATIVE_OR_SPECTATOR::test), this, this.getBoundingBox().inflate(5.0D, 3.0D, 5.0D));
+        if (!(this.level() instanceof ServerLevel sl)) return false;
+        List<Player> players = sl.getNearbyPlayers(TargetingConditions.forNonCombat().range(5.0D).selector((entity, level) -> EntitySelector.NO_CREATIVE_OR_SPECTATOR.test(entity)), this, this.getBoundingBox().inflate(5.0D, 3.0D, 5.0D));
         return !players.isEmpty();
     }
 
@@ -394,37 +395,37 @@ public class Snail extends ClimbingAnimal implements NaturalistGeoEntity, Bucket
         return this.geoCache;
     }
 
-    private <E extends Snail> PlayState predicate(final @NotNull AnimationState<E> event) {
+    private PlayState predicate(final @NotNull AnimationTest<Snail> event) {
         if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
-            event.getController().setAnimation(CRAWL);
+            event.setAnimation(CRAWL);
         } else if (this.isClimbing()){
-            event.getController().setAnimation(CLIMB);
+            event.setAnimation(CLIMB);
         } else {
-            event.getController().setAnimation(IDLE);
+            event.setAnimation(IDLE);
         }
         return PlayState.CONTINUE;
     }
 
-    private <E extends Snail> PlayState hidePredicate(final AnimationState<E> event) {
+    private PlayState hidePredicate(final AnimationTest<Snail> event) {
         if( this.canHide()) {
-            event.getController().setAnimation(HIDE);
+            event.setAnimation(HIDE);
             return PlayState.CONTINUE;
         }
-        event.getController().forceAnimationReset();
+        
 
         return PlayState.STOP;
     }
 
-    private void soundListener(@NotNull SoundKeyframeEvent<Snail> event) {
-        Snail snail = event.getAnimatable();
-        if (snail.level().isClientSide) {
-            if (event.getKeyframeData().getSound().equals("forward")) {
+    private void soundListener(@NotNull KeyFrameEvent<Snail, SoundKeyframeData> event) {
+        Snail snail = event.animatable();
+        if (snail.level().isClientSide()) {
+            if (event.keyframeData().getSound().equals("forward")) {
                 snail.level().playLocalSound(snail.getX(), snail.getY(), snail.getZ(), NaturalistSoundEvents.SNAIL_FORWARD.get(), snail.getSoundSource(), 0.5F, 1.0F, false);
             }
-            if (event.getKeyframeData().getSound().equals("back")) {
+            if (event.keyframeData().getSound().equals("back")) {
                 snail.level().playLocalSound(snail.getX(), snail.getY(), snail.getZ(), NaturalistSoundEvents.SNAIL_BACK.get(), snail.getSoundSource(), 0.5F, 1.0F, false);
             }
-            if (event.getKeyframeData().getSound().equals("hide")) {
+            if (event.keyframeData().getSound().equals("hide")) {
                 snail.level().playLocalSound(snail.getX(), snail.getY(), snail.getZ(), NaturalistSoundEvents.TORTOISE_HIDE.get(), snail.getSoundSource(), 0.2F, 1.7F, false);
             }
         }
@@ -432,8 +433,8 @@ public class Snail extends ClimbingAnimal implements NaturalistGeoEntity, Bucket
 
     @Override
     public void registerControllers(final AnimatableManager.@NotNull ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 5, this::predicate).setSoundKeyframeHandler(this::soundListener));
-        controllers.add(new AnimationController<>(this, "hideController", 0, this::hidePredicate).setSoundKeyframeHandler(this::soundListener));
+        controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(this::soundListener));
+        controllers.add(new AnimationController<>("hideController", 0, this::hidePredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(this::soundListener));
     }
 
 

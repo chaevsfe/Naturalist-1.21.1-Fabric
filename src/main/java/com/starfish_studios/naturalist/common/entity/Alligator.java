@@ -10,7 +10,6 @@ import com.starfish_studios.naturalist.core.registry.NaturalistRegistry;
 import com.starfish_studios.naturalist.core.registry.NaturalistSoundEvents;
 import com.starfish_studios.naturalist.core.registry.NaturalistTags;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -29,27 +28,29 @@ import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.pathfinder.PathType;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import com.starfish_studios.naturalist.common.entity.core.NaturalistGeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import java.util.function.Predicate;
 
 public class Alligator extends NaturalistAnimal implements NaturalistGeoEntity, EggLayingAnimal {
     // region VARIABLES
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
-    private static final Ingredient FOOD_ITEMS = Ingredient.of(NaturalistTags.ItemTags.ALLIGATOR_FOOD_ITEMS);
+    private static final Predicate<ItemStack> FOOD_ITEMS = (stack) -> stack.is(NaturalistTags.ItemTags.ALLIGATOR_FOOD_ITEMS);
     private static final EntityDataAccessor<Boolean> HAS_EGG = SynchedEntityData.defineId(Alligator.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Boolean> LAYING_EGG = SynchedEntityData.defineId(Alligator.class, EntityDataSerializers.BOOLEAN);
 
@@ -79,7 +80,7 @@ public class Alligator extends NaturalistAnimal implements NaturalistGeoEntity, 
         return new MMPathNavigatorGround(this, level);
     }
 
-    public static boolean checkAlligatorSpawnRules(EntityType<? extends Alligator> type, LevelAccessor level, MobSpawnType spawnType, BlockPos pos, RandomSource random) {
+    public static boolean checkAlligatorSpawnRules(EntityType<? extends Alligator> type, LevelAccessor level, EntitySpawnReason spawnType, BlockPos pos, RandomSource random) {
         return level.getBlockState(pos.below()).is(BlockTags.FROGS_SPAWNABLE_ON) && level.getRawBrightness(pos, 0) > 8;
     }
 
@@ -109,7 +110,7 @@ public class Alligator extends NaturalistAnimal implements NaturalistGeoEntity, 
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(@NotNull ServerLevel level, @NotNull AgeableMob otherParent) {
-        return NaturalistEntityTypes.ALLIGATOR.get().create(level);
+        return NaturalistEntityTypes.ALLIGATOR.get().create(level, EntitySpawnReason.BREEDING);
     }
 
     public static AttributeSupplier.@NotNull Builder createAttributes() {
@@ -134,8 +135,8 @@ public class Alligator extends NaturalistAnimal implements NaturalistGeoEntity, 
         this.goalSelector.addGoal(6, new LookAtPlayerGoal(this, Player.class, 6.0F));
         this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
         this.targetSelector.addGoal(1, new BabyHurtByTargetGoal(this));
-        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, 10, true, false, (entity) -> !this.isBaby() && entity.isInWater()));
-        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, LivingEntity.class, 10, true, false, (entity) -> {
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, 10, true, false, (entity, level) -> !this.isBaby() && entity.isInWater()));
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, LivingEntity.class, 10, true, false, (entity, level) -> {
             if(entity instanceof Alligator) return false;
             Iterable<BlockPos> list = BlockPos.betweenClosed(entity.blockPosition().offset(-2, -2, -2), entity.blockPosition().offset(2, 2, 2));
             boolean isEntityNearAlligatorEggs = false;
@@ -147,7 +148,7 @@ public class Alligator extends NaturalistAnimal implements NaturalistGeoEntity, 
             }
             return !this.isBaby() && isEntityNearAlligatorEggs;
         }));
-        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, LivingEntity.class, 10, true, false, (entity) -> !this.isBaby() && entity.getType().is(NaturalistTags.EntityTypes.ALLIGATOR_HOSTILES)));
+        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, LivingEntity.class, 10, true, false, (entity, level) -> !this.isBaby() && entity.getType().is(NaturalistTags.EntityTypes.ALLIGATOR_HOSTILES)));
     }
 
 
@@ -208,15 +209,15 @@ public class Alligator extends NaturalistAnimal implements NaturalistGeoEntity, 
     }
 
     @Override
-    public void addAdditionalSaveData(@NotNull CompoundTag compound) {
-        super.addAdditionalSaveData(compound);
-        compound.putBoolean("HasEgg", this.hasEgg());
+    protected void addAdditionalSaveData(ValueOutput view) {
+        super.addAdditionalSaveData(view);
+        view.putBoolean("HasEgg", this.hasEgg());
     }
 
     @Override
-    public void readAdditionalSaveData(@NotNull CompoundTag compound) {
-        super.readAdditionalSaveData(compound);
-        this.setHasEgg(compound.getBoolean("HasEgg"));
+    protected void readAdditionalSaveData(ValueInput view) {
+        super.readAdditionalSaveData(view);
+        this.setHasEgg(view.getBooleanOr("HasEgg", false));
     }
 
     @Override
@@ -254,43 +255,36 @@ public class Alligator extends NaturalistAnimal implements NaturalistGeoEntity, 
     }
 
     // region GECKOLIB
-    @Override
-    public double getBoneResetTime() {
-        return 5;
-    }
 
     @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return this.geoCache;
     }
 
-    protected <E extends Alligator> PlayState predicate(final AnimationState<E> event) {
-        double speedModifier = this.getAttributeValue(Attributes.MOVEMENT_SPEED);
-        /* if (this.isDigging) {
-            event.getController().setAnimation(RawAnimation.begin().thenLoop("dig"));
-            event.getController().forceAnimationReset();
-        } else*/ if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
+    protected PlayState predicate(final AnimationTest<Alligator> event) {
+        if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
             if (this.isInWater()) {
-                event.getController().setAnimation(SWIM);
+                event.setAnimation(SWIM);
             } else {
-                event.getController().setAnimation(WALK);
+                event.setAnimation(WALK);
                 if (this.isBaby() || this.getTarget() != null) {
-                    event.getController().setAnimationSpeed(3.0D);
+                    event.setControllerSpeed((float)(1.2F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
                 }
-                event.getController().setAnimationSpeed(2.0D);
+                event.setControllerSpeed((float)(0.8F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
             }
         } else {
-            event.getController().setAnimation(IDLE);
-            event.getController().setAnimationSpeed(0.6D);
+            event.setAnimation(IDLE);
+            event.setControllerSpeed((float)(0.24F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
         }
         return PlayState.CONTINUE;
     }
 
-    private <E extends Alligator> PlayState attackPredicate(final AnimationState<E> event) {
-        if (this.swinging && event.getController().getAnimationState().equals(AnimationController.State.STOPPED)) {
-            event.getController().forceAnimationReset();
+    private PlayState attackPredicate(final AnimationTest<Alligator> event) {
+        if (this.swinging && event.controller().getPlayState() == PlayState.STOP) {
+            event.controller().reset();
+            
 
-            event.getController().setAnimation(BITE);
+            event.setAnimation(BITE);
             this.swinging = false;
         }
         return PlayState.CONTINUE;
@@ -300,8 +294,8 @@ public class Alligator extends NaturalistAnimal implements NaturalistGeoEntity, 
 
     @Override
     public void registerControllers(final AnimatableManager.@NotNull ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 5, this::predicate).setSoundKeyframeHandler(event -> {}));
-        controllers.add(new AnimationController<>(this, "attackController", 2, this::attackPredicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("attackController", 2, this::attackPredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
     }
     // endregion
 }

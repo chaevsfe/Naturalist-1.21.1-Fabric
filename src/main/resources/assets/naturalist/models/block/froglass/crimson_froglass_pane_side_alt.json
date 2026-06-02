@@ -1,5 +1,6 @@
 {
   "parent": "minecraft:block/template_glass_pane_side_alt",
+  "render_type": "minecraft:cutout",
   "textures": {
     "edge": "naturalist:block/crimson_froglass_pane_top",
     "pane": "naturalist:block/crimson_froglass"

@@ -6,12 +6,8 @@
     " F "
   ],
   "key": {
-    "F": {
-      "item": "naturalist:fur"
-    },
-    "W": {
-      "tag": "minecraft:wool"
-    }
+    "F": "naturalist:fur",
+    "W": "#minecraft:wool"
   },
   "result": {
     "id": "naturalist:teddy_bear"

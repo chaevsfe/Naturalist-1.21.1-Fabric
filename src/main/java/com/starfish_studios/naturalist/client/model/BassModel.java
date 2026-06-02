@@ -4,25 +4,24 @@ import com.starfish_studios.naturalist.Naturalist;
 import com.starfish_studios.naturalist.common.entity.Bass;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import software.bernie.geckolib.model.GeoModel;
+import software.bernie.geckolib.renderer.base.GeoRenderState;
 
 @Environment(EnvType.CLIENT)
 public class BassModel extends GeoModel<Bass> {
     @Override
-    @SuppressWarnings("removal")
-    public ResourceLocation getModelResource(Bass bass) {
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "geo/entity/bass.geo.json");
+    public Identifier getModelResource(GeoRenderState renderState) {
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "models/entity/bass.geo.json");
     }
 
     @Override
-    @SuppressWarnings("removal")
-    public ResourceLocation getTextureResource(Bass bass) {
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/bass.png");
+    public Identifier getTextureResource(GeoRenderState renderState) {
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/bass.png");
     }
 
     @Override
-    public ResourceLocation getAnimationResource(Bass bass) {
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "animations/bass.rp_anim.json");
+    public Identifier getAnimationResource(Bass bass) {
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "animations/bass.rp_anim.json");
     }
 }

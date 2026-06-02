@@ -11,7 +11,6 @@ import com.starfish_studios.naturalist.core.registry.NaturalistTags;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ColorParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -32,23 +31,26 @@ import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import com.starfish_studios.naturalist.common.entity.core.NaturalistGeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.keyframe.event.SoundKeyframeEvent;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.state.KeyFrameEvent;
+import software.bernie.geckolib.cache.animation.keyframeevent.SoundKeyframeData;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.EnumSet;
@@ -78,7 +80,7 @@ public class Rhino extends NaturalistAnimal implements NaturalistGeoEntity {
     }
 
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, EntitySpawnReason pReason, @Nullable SpawnGroupData pSpawnData) {
         if (pSpawnData == null) {
             pSpawnData = new AgeableMobGroupData(1.0F);
         }
@@ -108,7 +110,7 @@ public class Rhino extends NaturalistAnimal implements NaturalistGeoEntity {
         this.goalSelector.addGoal(1, new RhinoMeleeAttackGoal(this, 1.2D, false));
         this.goalSelector.addGoal(2, new RhinoPrepareChargeGoal(this));
         this.goalSelector.addGoal(3, new RhinoChargeGoal(this, 2.5F));
-        // this.goalSelector.addGoal(4, new AvoidEntityGoal<>(this, LivingEntity.class, 8.0F, 0.8D, 1.2D, (p_213619_0_) -> p_213619_0_.getItemBySlot(EquipmentSlot.HEAD).getItem() == Items.CARVED_PUMPKIN));
+        // this.goalSelector.addGoal(4, new AvoidEntityGoal<>(this, LivingEntity.class, 8.0F, 0.8D, 1.2D, (p_213619_0_, level) -> p_213619_0_.getItemBySlot(EquipmentSlot.HEAD).getItem() == Items.CARVED_PUMPKIN));
         this.goalSelector.addGoal(3, new BabyPanicGoal(this, 2.0D));
         this.goalSelector.addGoal(4, new FollowParentGoal(this, 1.1));
         this.goalSelector.addGoal(5, new WaterAvoidingRandomStrollGoal(this, 1.0));
@@ -116,13 +118,13 @@ public class Rhino extends NaturalistAnimal implements NaturalistGeoEntity {
         this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
         this.targetSelector.addGoal(1, new BabyHurtByTargetGoal(this));
         this.targetSelector.addGoal(2, new RhinoNearestAttackablePlayerTargetGoal(this));
-        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, LivingEntity.class, 0, false, false, (p_213619_0_) -> p_213619_0_.getItemBySlot(EquipmentSlot.HEAD).getItem() == Items.CARVED_PUMPKIN));
+        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, LivingEntity.class, 0, false, false, (p_213619_0_, level) -> p_213619_0_.getItemBySlot(EquipmentSlot.HEAD).getItem() == Items.CARVED_PUMPKIN));
     }
 
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel serverLevel, AgeableMob ageableMob) {
-        return NaturalistEntityTypes.RHINO.get().create(serverLevel);
+        return NaturalistEntityTypes.RHINO.get().create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Override
@@ -133,15 +135,15 @@ public class Rhino extends NaturalistAnimal implements NaturalistGeoEntity {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag compound) {
-        super.addAdditionalSaveData(compound);
-        compound.putInt("StunTick", this.stunnedTick);
+    protected void addAdditionalSaveData(ValueOutput view) {
+        super.addAdditionalSaveData(view);
+        view.putInt("StunTick", this.stunnedTick);
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag compound) {
-        super.readAdditionalSaveData(compound);
-        this.stunnedTick = compound.getInt("StunTick");
+    protected void readAdditionalSaveData(ValueInput view) {
+        super.readAdditionalSaveData(view);
+        this.stunnedTick = view.getIntOr("StunTick", 0);
     }
 
     public void setChargeCooldownTicks(int ticks) {
@@ -200,7 +202,6 @@ public class Rhino extends NaturalistAnimal implements NaturalistGeoEntity {
         return super.isImmobile() || this.stunnedTick > 0;
     }
 
-    @Override
     protected void blockedByShield(LivingEntity defender) {
         this.stunnedTick = 60;
         this.resetChargeCooldownTicks();
@@ -220,8 +221,8 @@ public class Rhino extends NaturalistAnimal implements NaturalistGeoEntity {
     }
 
     @Override
-    public void customServerAiStep() {
-        super.customServerAiStep();
+    protected void customServerAiStep(ServerLevel serverLevel) {
+        super.customServerAiStep(serverLevel);
         if (this.getMoveControl().hasWanted()) {
             this.setSprinting(this.getMoveControl().getSpeedModifier() >= 1.5D);
         } else {
@@ -256,51 +257,51 @@ public class Rhino extends NaturalistAnimal implements NaturalistGeoEntity {
         return this.geoCache;
     }
 
-    private <E extends Rhino> PlayState predicate(final AnimationState<E> event) {
+    private PlayState predicate(final AnimationTest<Rhino> event) {
         if (this.stunnedTick > 0) {
-            event.getController().setAnimation(STUNNED);
-            event.getController().setAnimationSpeed(1.0F);
+            event.setAnimation(STUNNED);
+            event.setControllerSpeed((float)(0.4F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
         } else if (event.isMoving()) {
             if (this.isSprinting()) {
-                event.getController().setAnimation(RUN);
-                event.getController().setAnimationSpeed(3.0F);
+                event.setAnimation(RUN);
+                event.setControllerSpeed((float)(1.2F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
             } else {
-                event.getController().setAnimation(WALK);
-                event.getController().setAnimationSpeed(1.0F);
+                event.setAnimation(WALK);
+                event.setControllerSpeed((float)(0.4F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
             }
         } else if (this.hasChargeCooldown() && this.hasTarget()) {
-            event.getController().setAnimation(FOOT);
-            event.getController().setAnimationSpeed(1.0F);
+            event.setAnimation(FOOT);
+            event.setControllerSpeed((float)(0.4F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
         } else {
-            event.getController().setAnimation(IDLE);
-            event.getController().setAnimationSpeed(1.0F);
+            event.setAnimation(IDLE);
+            event.setControllerSpeed((float)(0.4F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
         }
         return PlayState.CONTINUE;
     }
 
-    private void soundListener(SoundKeyframeEvent<Rhino> event) {
-        Rhino rhino = event.getAnimatable();
-        if (rhino.level().isClientSide) {
-            if (event.getKeyframeData().getSound().equals("scrape")) {
+    private void soundListener(KeyFrameEvent<Rhino, SoundKeyframeData> event) {
+        Rhino rhino = event.animatable();
+        if (rhino.level().isClientSide()) {
+            if (event.keyframeData().getSound().equals("scrape")) {
                 rhino.level().playLocalSound(rhino.getX(), rhino.getY(), rhino.getZ(), NaturalistSoundEvents.RHINO_SCRAPE.get(), rhino.getSoundSource(), 1.0F, rhino.getVoicePitch(), false);
             }
         }
     }
 
-    private <E extends Rhino> PlayState attackPredicate(final AnimationState<E> event) {
-//        if (this.swinging && event.getController().getAnimationState().equals(AnimationController.State.STOPPED)) {
-//            event.getController().forceAnimationReset();
+    private PlayState attackPredicate(final AnimationTest<Rhino> event) {
+//        if (this.swinging && event.controller().getPlayState() == PlayState.STOP) {
+            event.controller().reset();
+//            
 //
-//            event.getController().setAnimation(ATTACK);
-//            event.getController().setAnimationSpeed(0.8F);
-//            this.swinging = false;
+//            event.setAnimation(ATTACK);
+////            this.swinging = false;
 //        }
 //        return PlayState.CONTINUE;
 
-        if (this.swinging && event.getController().getAnimationState().equals(AnimationController.State.STOPPED)) {
+        if (this.swinging && event.controller().getPlayState() == PlayState.STOP) {
+            event.controller().reset();
             event.setAnimation(ATTACK);
-            event.getController().setAnimationSpeed(1.3F);
-            event.getController().forceAnimationReset();
+            
         }
         this.swinging = false;
 
@@ -313,10 +314,10 @@ public class Rhino extends NaturalistAnimal implements NaturalistGeoEntity {
     public void registerControllers(final AnimatableManager.ControllerRegistrar controllers) {
         // TODO: used to be 5
         // data.setResetSpeedInTicks(5);
-        AnimationController<Rhino> controller = new AnimationController<>(this, "controller", 5, this::predicate);
+        AnimationController<Rhino> controller = new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0);
         controller.setSoundKeyframeHandler(this::soundListener);
         controllers.add(controller);
-        controllers.add(new AnimationController<>(this, "attackController", 5, this::attackPredicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("attackController", 5, this::attackPredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
     }
 
 
@@ -426,7 +427,7 @@ public class Rhino extends NaturalistAnimal implements NaturalistGeoEntity {
             if (this.mob.horizontalCollision && this.mob.onGround()) {
                 this.mob.jumpFromGround();
             }
-            if (this.mob.level().getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)) {
+            if (this.mob.level() instanceof ServerLevel sl && sl.getGameRules().get(GameRules.MOB_GRIEFING)) {
                 AABB boundingBox = this.mob.getBoundingBox().inflate(0.2);
                 for (BlockPos pos : BlockPos.betweenClosed(Mth.floor(boundingBox.minX), Mth.floor(boundingBox.minY), Mth.floor(boundingBox.minZ), Mth.floor(boundingBox.maxX), Mth.floor(boundingBox.maxY), Mth.floor(boundingBox.maxZ))) {
                     BlockState state = this.mob.level().getBlockState(pos);
@@ -444,13 +445,14 @@ public class Rhino extends NaturalistAnimal implements NaturalistGeoEntity {
         }
 
         protected void tryToHurt() {
-            List<LivingEntity> nearbyEntities = this.mob.level().getNearbyEntities(LivingEntity.class, TargetingConditions.forCombat(), this.mob, this.mob.getBoundingBox());
+            if (!(this.mob.level() instanceof ServerLevel serverLevel)) return;
+            List<LivingEntity> nearbyEntities = serverLevel.getNearbyEntities(LivingEntity.class, TargetingConditions.forCombat(), this.mob, this.mob.getBoundingBox());
             if (!nearbyEntities.isEmpty()) {
                 LivingEntity livingEntity = nearbyEntities.get(0);
                 if (!(livingEntity instanceof Rhino)) {
                     livingEntity.hurt(livingEntity.damageSources().mobAttack(this.mob), (float) this.mob.getAttributeValue(Attributes.ATTACK_DAMAGE));
                     float speed = Mth.clamp(this.mob.getSpeed() * 1.65f, 0.2f, 3.0f);
-                    float shieldBlockModifier = livingEntity.isDamageSourceBlocked(livingEntity.damageSources().mobAttack(this.mob)) ? 0.5f : 1.0f;
+                    float shieldBlockModifier = livingEntity.isBlocking() ? 0.5f : 1.0f;
                     livingEntity.knockback(shieldBlockModifier * speed * 2.0D, this.chargeDirection.x(), this.chargeDirection.z());
                     double knockbackResistance = Math.max(0.0, 1.0 - livingEntity.getAttributeValue(Attributes.KNOCKBACK_RESISTANCE));
                     livingEntity.setDeltaMovement(livingEntity.getDeltaMovement().add(0.0, 0.4f * knockbackResistance, 0.0));
@@ -467,7 +469,7 @@ public class Rhino extends NaturalistAnimal implements NaturalistGeoEntity {
         private final Rhino rhino;
 
         public RhinoNearestAttackablePlayerTargetGoal(Rhino mob) {
-            super(mob, Player.class, 10, true, true, EntitySelector.NO_CREATIVE_OR_SPECTATOR::test);
+            super(mob, Player.class, 10, true, true, (entity, level) -> EntitySelector.NO_CREATIVE_OR_SPECTATOR.test(entity));
             this.rhino = mob;
         }
 

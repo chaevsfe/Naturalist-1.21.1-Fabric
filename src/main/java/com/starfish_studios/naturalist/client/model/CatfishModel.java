@@ -4,26 +4,25 @@ import com.starfish_studios.naturalist.Naturalist;
 import com.starfish_studios.naturalist.common.entity.Catfish;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.NotNull;
 import software.bernie.geckolib.model.GeoModel;
+import software.bernie.geckolib.renderer.base.GeoRenderState;
 
 @Environment(EnvType.CLIENT)
 public class CatfishModel extends GeoModel<Catfish> {
     @Override
-    @SuppressWarnings("removal")
-    public ResourceLocation getModelResource(Catfish catfish) {
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "geo/entity/catfish.geo.json");
+    public Identifier getModelResource(GeoRenderState renderState) {
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "models/entity/catfish.geo.json");
     }
 
     @Override
-    @SuppressWarnings("removal")
-    public @NotNull ResourceLocation getTextureResource(Catfish catfish) {
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/catfish.png");
+    public Identifier getTextureResource(GeoRenderState renderState) {
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/catfish.png");
     }
 
     @Override
-    public ResourceLocation getAnimationResource(Catfish catfish) {
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "animations/catfish.rp_anim.json");
+    public Identifier getAnimationResource(Catfish catfish) {
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "animations/catfish.rp_anim.json");
     }
 }

@@ -266,7 +266,9 @@ public class Elephant extends NaturalistAnimal implements NeutralMob, Naturalist
     }
     private <E extends Elephant> @NotNull PlayState predicate(final AnimationState<E> event) {
         if (this.isBaby() || this.getTarget() != null) {
-            event.setControllerSpeed(1.3f + event.getLimbSwingAmount());
+            event.setControllerSpeed(1.0f + event.getLimbSwingAmount() * 0.75f);
+        } else {
+            event.getController().setAnimationSpeed(0.75D);
         }
         if (event.isMoving()) {
             if (this.isSprinting()) {
@@ -285,8 +287,9 @@ public class Elephant extends NaturalistAnimal implements NeutralMob, Naturalist
     private <E extends Elephant> PlayState swingPredicate(final @NotNull AnimationState<E> event) {
         if (this.swinging && event.getController().getAnimationState().equals(AnimationController.State.STOPPED)) {
             event.getController().forceAnimationReset();
-        
+
             event.getController().setAnimation(RawAnimation.begin().thenPlay("animation.sf_nba.elephant.swing"));
+            event.getController().setAnimationSpeed(1.5D);
             this.swinging = false;
         }
         return PlayState.CONTINUE;

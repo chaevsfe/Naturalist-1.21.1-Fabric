@@ -6,7 +6,8 @@ import com.starfish_studios.naturalist.common.entity.core.ai.navigation.MMPathNa
 import com.starfish_studios.naturalist.common.entity.core.ai.navigation.SmartBodyHelper;
 import com.starfish_studios.naturalist.core.registry.NaturalistEntityTypes;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -33,14 +34,13 @@ import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
-import java.util.UUID;
 
 public class Moose extends NaturalistAnimal implements NeutralMob, NaturalistGeoEntity {
 
@@ -75,12 +75,12 @@ public class Moose extends NaturalistAnimal implements NeutralMob, NaturalistGeo
         return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 40.0)
                 .add(Attributes.ATTACK_DAMAGE, 6.0)
-                .add(Attributes.MOVEMENT_SPEED, 0.2);
+                .add(Attributes.TEMPT_RANGE, 10).add(Attributes.MOVEMENT_SPEED, 0.2);
     }
 
     @Override
     public @Nullable AgeableMob getBreedOffspring(@NotNull ServerLevel level, @NotNull AgeableMob otherParent) {
-        return NaturalistEntityTypes.MOOSE.get().create(level);
+        return NaturalistEntityTypes.MOOSE.get().create(level, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Override
@@ -99,10 +99,10 @@ public class Moose extends NaturalistAnimal implements NeutralMob, NaturalistGeo
     }
 
     @Override
-    public boolean isInvulnerableTo(DamageSource damageSource) {
+    public boolean isInvulnerableTo(ServerLevel serverLevel, DamageSource damageSource) {
             return damageSource.equals(this.damageSources().freeze())
                 || damageSource.equals(this.damageSources().sweetBerryBush())
-                || super.isInvulnerableTo(damageSource);
+                || super.isInvulnerableTo(serverLevel, damageSource);
     }
 
     /// Goals
@@ -148,16 +148,16 @@ public class Moose extends NaturalistAnimal implements NeutralMob, NaturalistGeo
                 stack.shrink(1);
             }
             this.setSaddled(true);
-            this.playSound(SoundEvents.HORSE_SADDLE, 1.0f, 1.0f);
-            return InteractionResult.sidedSuccess(this.level().isClientSide);
+            this.playSound(SoundEvents.HORSE_SADDLE.value(), 1.0f, 1.0f);
+            return InteractionResult.SUCCESS;
         }
 
         // Mount (when saddled, empty hand or non-special item)
         if (this.isSaddled() && !this.isVehicle()) {
-            if (!this.level().isClientSide) {
+            if (!this.level().isClientSide()) {
                 player.startRiding(this);
             }
-            return InteractionResult.sidedSuccess(this.level().isClientSide);
+            return InteractionResult.SUCCESS;
         }
 
         return super.mobInteract(player, hand);
@@ -248,42 +248,42 @@ public class Moose extends NaturalistAnimal implements NeutralMob, NaturalistGeo
     }
 
     @Override
-    public void addAdditionalSaveData(@NotNull CompoundTag compound) {
-        super.addAdditionalSaveData(compound);
-        compound.putBoolean("Saddled", this.isSaddled());
+    protected void addAdditionalSaveData(ValueOutput view) {
+        super.addAdditionalSaveData(view);
+        view.putBoolean("Saddled", this.isSaddled());
     }
 
     @Override
-    public void readAdditionalSaveData(@NotNull CompoundTag compound) {
-        super.readAdditionalSaveData(compound);
-        this.setSaddled(compound.getBoolean("Saddled"));
+    protected void readAdditionalSaveData(ValueInput view) {
+        super.readAdditionalSaveData(view);
+        this.setSaddled(view.getBooleanOr("Saddled", false));
     }
 
     @Override
-    protected void dropEquipment() {
-        super.dropEquipment();
+    protected void dropEquipment(ServerLevel serverLevel) {
+        super.dropEquipment(serverLevel);
         if (this.isSaddled()) {
-            this.spawnAtLocation(Items.SADDLE);
+            this.spawnAtLocation(serverLevel, new ItemStack(Items.SADDLE));
         }
     }
 
     @Override
-    public int getRemainingPersistentAngerTime() {
+    public long getPersistentAngerEndTime() {
         return 0;
     }
 
     @Override
-    public void setRemainingPersistentAngerTime(int remainingPersistentAngerTime) {
+    public void setPersistentAngerEndTime(long remainingPersistentAngerTime) {
 
     }
 
     @Override
-    public @Nullable UUID getPersistentAngerTarget() {
+    public @Nullable EntityReference<LivingEntity> getPersistentAngerTarget() {
         return null;
     }
 
     @Override
-    public void setPersistentAngerTarget(@Nullable UUID persistentAngerTarget) {
+    public void setPersistentAngerTarget(@Nullable EntityReference<LivingEntity> persistentAngerTarget) {
 
     }
 
@@ -301,29 +301,30 @@ public class Moose extends NaturalistAnimal implements NeutralMob, NaturalistGeo
         return this.geoCache;
     }
 
-    protected <E extends Moose> PlayState predicate(final AnimationState<E> event) {
+    protected PlayState predicate(final AnimationTest<Moose> event) {
         if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
             if (this.isSprinting()) {
-                event.getController().setAnimation(RUN);
-                event.getController().setAnimationSpeed(1.5D);
+                event.setAnimation(RUN);
+                event.setControllerSpeed((float)(0.6F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
             } else {
-                event.getController().setAnimation(WALK);
-                event.getController().setAnimationSpeed(1.0D);
+                event.setAnimation(WALK);
+                event.setControllerSpeed((float)(0.4F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
             }
             return PlayState.CONTINUE;
         } else {
-            event.getController().setAnimation(IDLE);
+            event.setAnimation(IDLE);
         }
-        event.getController().forceAnimationReset();
+        
 
         return PlayState.STOP;
     }
 
-    protected <E extends Moose> PlayState attackPredicate(final AnimationState<E> event) {
-        if (this.swinging && event.getController().getAnimationState().equals(AnimationController.State.STOPPED)) {
-            event.getController().forceAnimationReset();
+    protected PlayState attackPredicate(final AnimationTest<Moose> event) {
+        if (this.swinging && event.controller().getPlayState() == PlayState.STOP) {
+            event.controller().reset();
+            
 
-            event.getController().setAnimation(ATTACK);
+            event.setAnimation(ATTACK);
             this.swinging = false;
         }
         return PlayState.CONTINUE;
@@ -331,8 +332,8 @@ public class Moose extends NaturalistAnimal implements NeutralMob, NaturalistGeo
 
     @Override
     public void registerControllers(final AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 5, this::predicate).setSoundKeyframeHandler(event -> {}));
-        controllers.add(new AnimationController<>(this, "swingController", 2, this::attackPredicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("swingController", 2, this::attackPredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
     }
 
     // endregion

@@ -5,7 +5,6 @@ import com.starfish_studios.naturalist.common.entity.core.ai.navigation.SmartBod
 import com.starfish_studios.naturalist.core.registry.NaturalistEntityTypes;
 import com.starfish_studios.naturalist.core.registry.NaturalistTags;
 import net.minecraft.core.Holder;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -30,22 +29,24 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.Biomes;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import com.starfish_studios.naturalist.common.entity.core.NaturalistGeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 public class Lizard extends TamableAnimal implements NaturalistGeoEntity {
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
     private static final EntityDataAccessor<Integer> VARIANT_ID = SynchedEntityData.defineId(Lizard.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> HAS_TAIL = SynchedEntityData.defineId(Lizard.class, EntityDataSerializers.BOOLEAN);
-    private static final Ingredient TEMPT_INGREDIENT = Ingredient.of(NaturalistTags.ItemTags.LIZARD_TEMPT_ITEMS);
+    private static final java.util.function.Predicate<net.minecraft.world.item.ItemStack> TEMPT_INGREDIENT = (stack) -> stack.is(NaturalistTags.ItemTags.LIZARD_TEMPT_ITEMS);
     private LizardAvoidEntityGoal<Player> avoidPlayersGoal;
     private int tailRegrowCooldown = 0;
 
@@ -60,7 +61,7 @@ public class Lizard extends TamableAnimal implements NaturalistGeoEntity {
     }
 
     public static AttributeSupplier.Builder createAttributes() {
-        return Mob.createMobAttributes().add(Attributes.MOVEMENT_SPEED, 0.3f).add(Attributes.MAX_HEALTH, 8.0).add(Attributes.ATTACK_DAMAGE, 2.0);
+        return Mob.createMobAttributes().add(Attributes.TEMPT_RANGE, 10).add(Attributes.MOVEMENT_SPEED, 0.3f).add(Attributes.MAX_HEALTH, 8.0).add(Attributes.ATTACK_DAMAGE, 2.0);
     }
 
 
@@ -116,7 +117,7 @@ public class Lizard extends TamableAnimal implements NaturalistGeoEntity {
     @Override
     public InteractionResult mobInteract(@NotNull Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
-        if (this.level().isClientSide) {
+        if (this.level().isClientSide()) {
             boolean bl = this.isOwnedBy(player) || this.isTame() || TEMPT_INGREDIENT.test(stack) && !this.isTame();
             return bl ? InteractionResult.CONSUME : InteractionResult.PASS;
         }
@@ -186,25 +187,25 @@ public class Lizard extends TamableAnimal implements NaturalistGeoEntity {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag compound) {
-        super.addAdditionalSaveData(compound);
-        compound.putInt("Variant", this.getVariant());
-        compound.putBoolean("HasTail", this.hasTail());
+    protected void addAdditionalSaveData(ValueOutput view) {
+        super.addAdditionalSaveData(view);
+        view.putInt("Variant", this.getVariant());
+        view.putBoolean("HasTail", this.hasTail());
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag compound) {
-        super.readAdditionalSaveData(compound);
-        this.setVariant(compound.getInt("Variant"));
-        this.setHasTail(compound.getBoolean("HasTail"));
+    protected void readAdditionalSaveData(ValueInput view) {
+        super.readAdditionalSaveData(view);
+        this.setVariant(view.getIntOr("Variant", 0));
+        this.setHasTail(view.getBooleanOr("HasTail", true));
     }
 
     @Override
-    public boolean hurt(DamageSource source, float amount) {
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource source, float amount) {
         if (this.hasTail() && this.getHealth() <= this.getMaxHealth() / 2) {
             this.setHasTail(false);
             this.playSound(SoundEvents.SLIME_SQUISH, 1.0f, 1.0f);
-            LizardTail lizardTail = NaturalistEntityTypes.LIZARD_TAIL.get().create(this.level());
+            LizardTail lizardTail = NaturalistEntityTypes.LIZARD_TAIL.get().create(this.level(), net.minecraft.world.entity.EntitySpawnReason.MOB_SUMMONED);
             if (lizardTail != null) {
                 lizardTail.setVariant(this.getVariant());
                 lizardTail.setPos(this.getX(), this.getY(), this.getZ());
@@ -215,7 +216,7 @@ public class Lizard extends TamableAnimal implements NaturalistGeoEntity {
             }
             this.tailRegrowCooldown = 12000;
         }
-        return super.hurt(source, amount);
+        return super.hurtServer(serverLevel, source, amount);
     }
 
     @Override
@@ -233,7 +234,7 @@ public class Lizard extends TamableAnimal implements NaturalistGeoEntity {
 
     @Override
     @Nullable
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, @Nullable SpawnGroupData spawnData) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, EntitySpawnReason reason, @Nullable SpawnGroupData spawnData) {
         Holder<Biome> holder = level.getBiome(this.blockPosition());
         if (holder.is(Biomes.SAVANNA)) {
             this.setVariant(3);
@@ -251,23 +252,23 @@ public class Lizard extends TamableAnimal implements NaturalistGeoEntity {
         return this.geoCache;
     }
 
-    private <E extends Lizard> PlayState predicate(final AnimationState<E> event) {
+    private PlayState predicate(final AnimationTest<Lizard> event) {
         if (this.isInSittingPose()) {
-            event.getController().setAnimation(SIT);
+            event.setAnimation(SIT);
             return PlayState.CONTINUE;
         } else if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
-            event.getController().setAnimation(WALK);
-            event.getController().setAnimationSpeed(2.0D);
+            event.setAnimation(WALK);
+            event.setControllerSpeed((float)(0.8F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
             return PlayState.CONTINUE;
         }
-        event.getController().forceAnimationReset();
+        
         
         return PlayState.STOP;
     }
 
     @Override
     public void registerControllers(final AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 0, this::predicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 0, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
     }
 
     static class LizardTemptGoal extends TemptGoal {
@@ -275,7 +276,7 @@ public class Lizard extends TamableAnimal implements NaturalistGeoEntity {
         private Player selectedPlayer;
         private final Lizard lizard;
 
-        public LizardTemptGoal(Lizard lizard, double speedModifier, Ingredient ingredient, boolean canScare) {
+        public LizardTemptGoal(Lizard lizard, double speedModifier, java.util.function.Predicate<ItemStack> ingredient, boolean canScare) {
             super(lizard, speedModifier, ingredient, canScare);
             this.lizard = lizard;
         }

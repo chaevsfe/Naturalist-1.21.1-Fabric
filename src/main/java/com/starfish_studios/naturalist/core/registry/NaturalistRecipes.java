@@ -17,6 +17,6 @@ public class NaturalistRecipes {
     public static final RecipeSerializer<?> BUG_NET_SERIALIZER = new BugNetInteractionRecipe.Serializer();
 
     public static void register() {
-        CommonPlatformHelper.registerRecipes("net", () -> BUG_NET,  () -> BUG_NET_SERIALIZER);
+        CommonPlatformHelper.registerRecipes("net", () -> BUG_NET, () -> BUG_NET_SERIALIZER);
     }
 }

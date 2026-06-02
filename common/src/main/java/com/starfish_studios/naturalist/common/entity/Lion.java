@@ -246,22 +246,24 @@ public class Lion extends NaturalistAnimal implements NaturalistGeoEntity, Sleep
     private <E extends Lion> PlayState predicate(final AnimationState<E> event) {
         if (this.isSleeping() && this.hasMane()) {
             event.getController().setAnimation(SLEEP2);
+            event.getController().setAnimationSpeed(0.75F);
         } else if (this.isSleeping() && !this.hasMane()) {
             event.getController().setAnimation(SLEEP);
+            event.getController().setAnimationSpeed(0.75F);
         } else if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
             if (this.isSprinting()) {
                 event.getController().setAnimation(RUN);
-                event.getController().setAnimationSpeed(2.5F);
+                event.getController().setAnimationSpeed(1.9F);
             } else if (this.isCrouching()) {
                 event.getController().setAnimation(PREY);
-                event.getController().setAnimationSpeed(0.8F);
+                event.getController().setAnimationSpeed(0.6F);
             } else {
                 event.getController().setAnimation(WALK);
-                event.getController().setAnimationSpeed(1.0F);
+                event.getController().setAnimationSpeed(0.75F);
             }
         } else {
             event.getController().setAnimation(IDLE);
-            event.getController().setAnimationSpeed(1.0F);
+            event.getController().setAnimationSpeed(0.75F);
         }
         return PlayState.CONTINUE;
     }
@@ -269,8 +271,9 @@ public class Lion extends NaturalistAnimal implements NaturalistGeoEntity, Sleep
     private <E extends Lion> PlayState attackPredicate(final AnimationState<E> event) {
         if (this.swinging && event.getController().getAnimationState().equals(AnimationController.State.STOPPED)) {
             event.getController().forceAnimationReset();
-        
+
             event.getController().setAnimation(RawAnimation.begin().thenPlay("attack"));
+            event.getController().setAnimationSpeed(1.5D);
             this.swinging = false;
         }
         return PlayState.CONTINUE;

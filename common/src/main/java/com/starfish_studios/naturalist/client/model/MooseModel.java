@@ -52,7 +52,7 @@ public class MooseModel extends GeoModel<Moose> {
             head.setScaleZ(1.0F);
         }
 
-        head.setRotX(extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
-        head.setRotY(extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
+        head.setRotX(-extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
+        head.setRotY(-extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
     }
 }

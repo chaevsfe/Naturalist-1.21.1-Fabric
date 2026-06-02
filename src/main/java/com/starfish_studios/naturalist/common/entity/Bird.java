@@ -27,10 +27,9 @@ import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.ai.util.LandRandomPos;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.FlyingAnimal;
-import net.minecraft.world.entity.animal.ShoulderRidingEntity;
+import net.minecraft.world.entity.animal.parrot.ShoulderRidingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.LeavesBlock;
@@ -39,18 +38,19 @@ import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import java.util.function.Predicate;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 public class Bird extends ShoulderRidingEntity implements FlyingAnimal, NaturalistGeoEntity {
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
     private BirdAvoidEntityGoal<Player> avoidPlayersGoal;
-    private static final Ingredient TAME_FOOD = Ingredient.of(NaturalistTags.ItemTags.BIRD_FOOD_ITEMS);
+    private static final Predicate<ItemStack> TAME_FOOD = (stack) -> stack.is(NaturalistTags.ItemTags.BIRD_FOOD_ITEMS);
     // private static final EntityDataAccessor<Boolean> IS_PECKING = SynchedEntityData.defineId(Bird.class, EntityDataSerializers.BOOLEAN);
     public float flap;
     public float flapSpeed;
@@ -85,10 +85,10 @@ public class Bird extends ShoulderRidingEntity implements FlyingAnimal, Naturali
     }
 
     public static AttributeSupplier.@NotNull Builder createAttributes() {
-        return Mob.createMobAttributes().add(Attributes.MAX_HEALTH, 6.0D).add(Attributes.FLYING_SPEED, 0.8F).add(Attributes.MOVEMENT_SPEED, 0.2D);
+        return Mob.createMobAttributes().add(Attributes.MAX_HEALTH, 6.0D).add(Attributes.FLYING_SPEED, 0.8F).add(Attributes.TEMPT_RANGE, 10).add(Attributes.MOVEMENT_SPEED, 0.2D);
     }
 
-    public static boolean checkBirdSpawnRules(EntityType<Bird> entityType, @NotNull LevelAccessor state, MobSpawnType type, @NotNull BlockPos pos, RandomSource random) {
+    public static boolean checkBirdSpawnRules(EntityType<Bird> entityType, @NotNull LevelAccessor state, EntitySpawnReason type, @NotNull BlockPos pos, RandomSource random) {
         return state.getBlockState(pos.below()).is(BlockTags.PARROTS_SPAWNABLE_ON) && isBrightEnoughToSpawn(state, pos);
     }
 
@@ -119,7 +119,7 @@ public class Bird extends ShoulderRidingEntity implements FlyingAnimal, Naturali
                 this.level().playSound(null, this.getX(), this.getY(), this.getZ(), NaturalistSoundEvents.BIRD_EAT.get(), this.getSoundSource(), 1.0F, 1.0F + (this.random.nextFloat() - this.random.nextFloat()) * 0.2F);
             }
 
-            if (!this.level().isClientSide) {
+            if (!this.level().isClientSide()) {
                 if (this.random.nextInt(10) == 0) {
                     this.tame(player);
                     this.level().broadcastEntityEvent(this, (byte)7);
@@ -128,7 +128,7 @@ public class Bird extends ShoulderRidingEntity implements FlyingAnimal, Naturali
                 }
             }
 
-            return InteractionResult.sidedSuccess(this.level().isClientSide);
+            return InteractionResult.SUCCESS;
         } else if (this.isTame() && this.isOwnedBy(player)) {
             if (TAME_FOOD.test(stack) && this.getHealth() < this.getMaxHealth()) {
                 if (!player.getAbilities().instabuild) {
@@ -138,12 +138,12 @@ public class Bird extends ShoulderRidingEntity implements FlyingAnimal, Naturali
                 if (this.getHealth() == this.getMaxHealth()) {
                     this.spawnTamingParticles(true);
                 }
-                return InteractionResult.sidedSuccess(this.level().isClientSide);
+                return InteractionResult.SUCCESS;
             } else if (!this.isFlying()) {
-                if (!this.level().isClientSide) {
+                if (!this.level().isClientSide()) {
                     this.setOrderedToSit(!this.isOrderedToSit());
                 }
-                return InteractionResult.sidedSuccess(this.level().isClientSide);
+                return InteractionResult.SUCCESS;
             }
 
         }
@@ -151,15 +151,12 @@ public class Bird extends ShoulderRidingEntity implements FlyingAnimal, Naturali
     }
 
     @Override
-    public boolean hurt(@NotNull DamageSource pSource, float pAmount) {
-        if (this.isInvulnerableTo(pSource)) {
+    public boolean hurtServer(ServerLevel serverLevel, @NotNull DamageSource pSource, float pAmount) {
+        if (this.isInvulnerableTo(serverLevel, pSource)) {
             return false;
         } else {
-            if (!this.level().isClientSide) {
-                this.setOrderedToSit(false);
-            }
-
-            return super.hurt(pSource, pAmount);
+            this.setOrderedToSit(false);
+            return super.hurtServer(serverLevel, pSource, pAmount);
         }
     }
 
@@ -191,7 +188,6 @@ public class Bird extends ShoulderRidingEntity implements FlyingAnimal, Naturali
         FlyingPathNavigation navigation = new FlyingPathNavigation(this, pLevel);
         navigation.setCanOpenDoors(false);
         navigation.setCanFloat(true);
-        navigation.setCanPassDoors(true);
         return navigation;
     }
 
@@ -231,7 +227,7 @@ public class Bird extends ShoulderRidingEntity implements FlyingAnimal, Naturali
     }
 
     @Override
-    public boolean causeFallDamage(float pFallDistance, float pMultiplier, @NotNull DamageSource pSource) {
+    public boolean causeFallDamage(double pFallDistance, float pMultiplier, @NotNull DamageSource pSource) {
         return false;
     }
 
@@ -282,7 +278,7 @@ public class Bird extends ShoulderRidingEntity implements FlyingAnimal, Naturali
     @Nullable
     @Override
     protected SoundEvent getAmbientSound() {
-        if (this.level().isNight()) {
+        if (this.level().isDarkOutside()) {
             return null;
         } else {
             if (this.getType().equals(NaturalistEntityTypes.BLUEJAY.get())) {
@@ -305,7 +301,7 @@ public class Bird extends ShoulderRidingEntity implements FlyingAnimal, Naturali
     @Override
     public void playAmbientSound() {
         super.playAmbientSound();
-        if (this.level() instanceof ServerLevel serverLevel && !this.level().isNight()) {
+        if (this.level() instanceof ServerLevel serverLevel && !this.level().isDarkOutside()) {
             float f = (float)level().getRandom().nextInt(4) / 24.0f;
             serverLevel.sendParticles(ParticleTypes.NOTE, this.getX(), this.getY() + 1, this.getZ(), 0, f, 0.0, 0.0, 1.0);
         }
@@ -313,35 +309,26 @@ public class Bird extends ShoulderRidingEntity implements FlyingAnimal, Naturali
 
 
     @Override
-    public double getBoneResetTime() {
-        return 2;
-    }
-
-    @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return this.geoCache;
     }
 
-    protected <E extends Bird> @NotNull PlayState predicate(final @NotNull AnimationState<E> event) {
+    protected @NotNull PlayState predicate(final @NotNull AnimationTest<Bird> event) {
         if (this.isInSittingPose()) {
-            event.getController().setAnimation(SIT);
+            event.setAnimation(SIT);
             return PlayState.CONTINUE;
         } else if (this.isFlying()) {
-            event.getController().setAnimation(FLY);
+            event.setAnimation(FLY);
             return PlayState.CONTINUE;
-        } /* else if (this.isPecking()) {
-            event.getController().setAnimation(new AnimationBuilder().loop("bird.peck"));
-            return PlayState.CONTINUE;
-        */
-        else {
-            event.getController().setAnimation(IDLE);
+        } else {
+            event.setAnimation(IDLE);
             return PlayState.CONTINUE;
         }
     }
 
     @Override
     public void registerControllers(final AnimatableManager.@NotNull ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 0, this::predicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 0, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
     }
 
     static class BirdWanderGoal extends WaterAvoidingRandomFlyingGoal {
@@ -451,7 +438,7 @@ public class Bird extends ShoulderRidingEntity implements FlyingAnimal, Naturali
         private Player selectedPlayer;
         private final @NotNull Bird bird;
 
-        public BirdTemptGoal(@NotNull Bird bird, double speedModifier, @NotNull Ingredient temptItems, boolean canScare) {
+        public BirdTemptGoal(@NotNull Bird bird, double speedModifier, @NotNull Predicate<ItemStack> temptItems, boolean canScare) {
             super(bird, speedModifier, temptItems, canScare);
             this.bird = bird;
         }

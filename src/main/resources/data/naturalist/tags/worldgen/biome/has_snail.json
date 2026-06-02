@@ -40,39 +40,39 @@
       "required": false
     },
     {
-      "id": "#c:is_forest",
+      "id": "#c:forest",
       "required": false
     },
     {
-      "id": "#c:is_savanna",
+      "id": "#c:savanna",
       "required": false
     },
     {
-      "id": "#c:is_river",
+      "id": "#c:river",
       "required": false
     },
     {
-      "id": "#c:is_hill",
+      "id": "#c:extreme_hills",
       "required": false
     },
     {
-      "id": "#c:is_mountain",
+      "id": "#c:mountain",
       "required": false
     },
     {
-      "id": "#c:is_plains",
+      "id": "#c:plains",
       "required": false
     },
     {
-      "id": "#c:is_swamp",
+      "id": "#c:swamp",
       "required": false
     },
     {
-      "id": "#c:is_underground",
+      "id": "#c:underground",
       "required": false
     },
     {
-      "id": "#c:is_mushroom",
+      "id": "#c:mushroom",
       "required": false
     }
   ]

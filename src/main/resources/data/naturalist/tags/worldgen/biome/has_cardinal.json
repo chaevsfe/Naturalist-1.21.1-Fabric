@@ -22,19 +22,19 @@
       "required": false
     },
     {
-      "id": "#c:is_forest",
+      "id": "#c:forest",
       "required": false
     },
     {
-      "id": "#c:is_savanna",
+      "id": "#c:savanna",
       "required": false
     },
     {
-      "id": "#c:is_swamp",
+      "id": "#c:swamp",
       "required": false
     },
     {
-      "id": "#c:is_desert",
+      "id": "#c:desert",
       "required": false
     }
   ]

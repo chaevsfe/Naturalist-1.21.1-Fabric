@@ -4,26 +4,25 @@ import com.starfish_studios.naturalist.Naturalist;
 import com.starfish_studios.naturalist.common.entity.Caterpillar;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.NotNull;
 import software.bernie.geckolib.model.GeoModel;
+import software.bernie.geckolib.renderer.base.GeoRenderState;
 
 @Environment(EnvType.CLIENT)
 public class CaterpillarModel extends GeoModel<Caterpillar> {
     @Override
-    @SuppressWarnings("removal")
-    public ResourceLocation getModelResource(Caterpillar object) {
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "geo/entity/caterpillar.geo.json");
+    public Identifier getModelResource(GeoRenderState renderState) {
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "models/entity/caterpillar.geo.json");
     }
 
     @Override
-    @SuppressWarnings("removal")
-    public ResourceLocation getTextureResource(Caterpillar object) {
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/caterpillar.png");
+    public Identifier getTextureResource(GeoRenderState renderState) {
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/caterpillar.png");
     }
 
     @Override
-    public @NotNull ResourceLocation getAnimationResource(Caterpillar animatable) {
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "animations/caterpillar.rp_anim.json");
+    public @NotNull Identifier getAnimationResource(Caterpillar animatable) {
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "animations/caterpillar.rp_anim.json");
     }
 }

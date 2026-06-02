@@ -51,7 +51,7 @@ public class BoarModel extends GeoModel<Boar> {
             head.setScaleZ(1.0F);
         }
 
-        head.setRotX(extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
-        head.setRotZ(extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
+        head.setRotX(-extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
+        head.setRotZ(-extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
     }
 }

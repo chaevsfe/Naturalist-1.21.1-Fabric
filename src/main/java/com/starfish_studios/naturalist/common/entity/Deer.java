@@ -30,11 +30,11 @@ import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.List;
@@ -77,11 +77,11 @@ public class Deer extends NaturalistAnimal implements NaturalistGeoEntity {
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob mob) {
-        return NaturalistEntityTypes.DEER.get().create(level);
+        return NaturalistEntityTypes.DEER.get().create(level, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     public static AttributeSupplier.@NotNull Builder createAttributes() {
-        return Mob.createMobAttributes().add(Attributes.MAX_HEALTH, 8.0D).add(Attributes.MOVEMENT_SPEED, 0.2F);
+        return Mob.createMobAttributes().add(Attributes.MAX_HEALTH, 8.0D).add(Attributes.TEMPT_RANGE, 10).add(Attributes.MOVEMENT_SPEED, 0.2F);
     }
 
     @Override
@@ -126,7 +126,7 @@ public class Deer extends NaturalistAnimal implements NaturalistGeoEntity {
 
     @Override
     public void aiStep() {
-        if (this.level().isClientSide) {
+        if (this.level().isClientSide()) {
             this.eatAnimationTick = Math.max(0, this.eatAnimationTick - 1);
         }
         super.aiStep();
@@ -155,8 +155,8 @@ public class Deer extends NaturalistAnimal implements NaturalistGeoEntity {
     // MOVEMENT
 
     @Override
-    public void customServerAiStep() {
-        super.customServerAiStep();
+    protected void customServerAiStep(ServerLevel serverLevel) {
+        super.customServerAiStep(serverLevel);
         this.setSprinting(this.getMoveControl().hasWanted() &&
                 this.getMoveControl().getSpeedModifier() >= 1.5D);
     }
@@ -165,8 +165,8 @@ public class Deer extends NaturalistAnimal implements NaturalistGeoEntity {
     // PANICKING
 
     @Override
-    public boolean hurt(DamageSource pSource, float pAmount) {
-        boolean lastHurt = super.hurt(pSource, pAmount);
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource pSource, float pAmount) {
+        boolean lastHurt = super.hurtServer(serverLevel, pSource, pAmount);
         if (lastHurt) {
             int ticks = 100 + this.random.nextInt(100);
             this.panicTicks = ticks;
@@ -181,7 +181,7 @@ public class Deer extends NaturalistAnimal implements NaturalistGeoEntity {
     @Override
     public void tick() {
         super.tick();
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide()) {
             if (panicTicks >= 0) {
                 panicTicks--;
             }
@@ -197,39 +197,39 @@ public class Deer extends NaturalistAnimal implements NaturalistGeoEntity {
         return this.geoCache;
     }
 
-    protected <E extends Deer> PlayState predicate(final @NotNull AnimationState<E> event) {
+    protected PlayState predicate(final @NotNull AnimationTest<Deer> event) {
         if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
             if (this.isSprinting()) {
                 if (this.isBaby()) {
-                    event.getController().setAnimation(BABY_RUN);
-                    event.getController().setAnimationSpeed(1.0D);
+                    event.setAnimation(BABY_RUN);
+                    event.setControllerSpeed((float)(0.4F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
                 } else {
-                    event.getController().setAnimation(RUN);
-                    event.getController().setAnimationSpeed(2.3D);
+                    event.setAnimation(RUN);
+                    event.setControllerSpeed((float)(0.92F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
                 }
             } else {
-                event.getController().setAnimation(WALK);
+                event.setAnimation(WALK);
                 if (this.isBaby()) {
-                    event.getController().setAnimationSpeed(1.2D);
+                    event.setControllerSpeed((float)(0.48F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
                 } else {
-                    event.getController().setAnimationSpeed(1.0D);
+                    event.setControllerSpeed((float)(0.4F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
                 }
             }
         } else {
-            event.getController().setAnimation(IDLE);
+            event.setAnimation(IDLE);
             if (this.isBaby()) {
-                event.getController().setAnimationSpeed(1.5D);
+                event.setControllerSpeed((float)(0.6F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
             } else {
-                event.getController().setAnimationSpeed(1.0D);
+                event.setControllerSpeed((float)(0.4F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
             }
         }
         return PlayState.CONTINUE;
     }
 
     // eatPredicate
-    protected <E extends Deer> PlayState eatPredicate(final @NotNull AnimationState<E> event) {
+    protected PlayState eatPredicate(final @NotNull AnimationTest<Deer> event) {
         if (this.isEating()) {
-            event.getController().setAnimation(EAT);
+            event.setAnimation(EAT);
             return PlayState.CONTINUE;
         }
         return PlayState.STOP;
@@ -238,7 +238,7 @@ public class Deer extends NaturalistAnimal implements NaturalistGeoEntity {
     @Override
     public void registerControllers(final AnimatableManager.@NotNull ControllerRegistrar controllers) {
         // data.setResetSpeedInTicks(10);
-        controllers.add(new AnimationController<>(this, "controller", 5, this::predicate).setSoundKeyframeHandler(event -> {}));
-        controllers.add(new AnimationController<>(this, "eat_controller", 5, this::eatPredicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("eat_controller", 5, this::eatPredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
     }
 }

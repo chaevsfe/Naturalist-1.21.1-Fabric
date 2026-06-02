@@ -21,7 +21,7 @@ package com.starfish_studios.naturalist.common.block;
                     level.levelEvent(2001, pos, Block.getId(state));
                     Ostrich ostrich = NaturalistEntityTypes.OSTRICH.get().create(level);
                     ostrich.setAge(-24000);
-                    ostrich.moveTo((double)pos.getX() + 0.3 + (double)j * 0.2, pos.getY(), (double)pos.getZ() + 0.3, 0.0f, 0.0f);
+                    ostrich.snapTo((double)pos.getX() + 0.3 + (double)j * 0.2, pos.getY(), (double)pos.getZ() + 0.3, 0.0f, 0.0f);
                     level.addFreshEntity(ostrich);
                 }
             }
@@ -30,7 +30,7 @@ package com.starfish_studios.naturalist.common.block;
 
     @Override
     public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean isMoving) {
-        if (!level.isClientSide) {
+        if (!level.isClientSide()) {
             level.levelEvent(2005, pos, 0);
         }
     }
@@ -59,7 +59,7 @@ package com.starfish_studios.naturalist.common.block;
         if (!this.canDestroyEgg(level, entity)) {
             return;
         }
-        if (!level.isClientSide && level.random.nextInt(chance) == 0 && state.is(Blocks.TURTLE_EGG)) {
+        if (!level.isClientSide() && level.random.nextInt(chance) == 0 && state.is(Blocks.TURTLE_EGG)) {
             this.decreaseEggs(level, pos, state);
         }
     }

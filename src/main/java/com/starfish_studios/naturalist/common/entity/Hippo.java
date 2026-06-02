@@ -32,7 +32,7 @@ import net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.vehicle.Boat;
+import net.minecraft.world.entity.vehicle.boat.Boat;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -45,11 +45,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import com.starfish_studios.naturalist.common.entity.core.NaturalistGeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.EnumSet;
@@ -89,12 +89,12 @@ public class Hippo extends NaturalistAnimal implements NaturalistGeoEntity {
         return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 40.0D)
                 .add(Attributes.FOLLOW_RANGE, 20.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.2D)
+                .add(Attributes.TEMPT_RANGE, 10).add(Attributes.MOVEMENT_SPEED, 0.2D)
                 .add(Attributes.ATTACK_DAMAGE, 6.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.6D);
     }
 
-    public static boolean checkHippoSpawnRules(EntityType<? extends NaturalistAnimal> entityType, LevelAccessor levelAccessor, MobSpawnType mobSpawnType, BlockPos blockPos, RandomSource randomSource) {
+    public static boolean checkHippoSpawnRules(EntityType<? extends NaturalistAnimal> entityType, LevelAccessor levelAccessor, EntitySpawnReason mobSpawnType, BlockPos blockPos, RandomSource randomSource) {
         BlockPos.MutableBlockPos mutableBlockPos = new BlockPos.MutableBlockPos();
         if (levelAccessor.getBlockState(blockPos.below()).is(BlockTags.ANIMALS_SPAWNABLE_ON) && Animal.isBrightEnoughToSpawn(levelAccessor, blockPos)) {
             for (int x = -16; x <= 16; x++) {
@@ -132,12 +132,12 @@ public class Hippo extends NaturalistAnimal implements NaturalistGeoEntity {
         this.goalSelector.addGoal(8, new LookAtPlayerGoal(this, Player.class, 6.0F));
         this.goalSelector.addGoal(9, new RandomLookAroundGoal(this));
         this.targetSelector.addGoal(1, new BabyHurtByTargetGoal(this));
-        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, 10, true, false, (entity) -> !this.isBaby() && entity.isInWater()));
+        this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, 10, true, false, (entity, level) -> !this.isBaby() && entity.isInWater()));
     }
 
     @Override
-    public void customServerAiStep() {
-        super.customServerAiStep();
+    protected void customServerAiStep(ServerLevel serverLevel) {
+        super.customServerAiStep(serverLevel);
         if (this.getMoveControl().hasWanted()) {
             this.setSprinting(this.getMoveControl().getSpeedModifier() >= 1.0D);
         } else {
@@ -150,7 +150,7 @@ public class Hippo extends NaturalistAnimal implements NaturalistGeoEntity {
         ItemStack itemStack = player.getItemInHand(hand);
         if (this.isFood(itemStack)) {
             int age = this.getAge();
-            if (!this.level().isClientSide && age == 0 && this.canFallInLove()) {
+            if (!this.level().isClientSide() && age == 0 && this.canFallInLove()) {
                 this.eatingTicks = 10;
                 this.setItemSlot(EquipmentSlot.MAINHAND, itemStack.copy());
                 this.swing(InteractionHand.MAIN_HAND);
@@ -166,19 +166,19 @@ public class Hippo extends NaturalistAnimal implements NaturalistGeoEntity {
             if (this.isBaby()) {
                 this.usePlayerItem(player, hand, itemStack);
                 this.ageUp(Animal.getSpeedUpSecondsWhenFeeding(-age), true);
-                return InteractionResult.sidedSuccess(this.level().isClientSide);
+                return InteractionResult.SUCCESS;
             }
-            if (this.level().isClientSide) {
+            if (this.level().isClientSide()) {
                 return InteractionResult.CONSUME;
             }
         }
-        return InteractionResult.PASS;
+        return super.mobInteract(player, hand);
     }
 
     @Override
     public void aiStep() {
         super.aiStep();
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide()) {
             if (this.eatingTicks > 0) {
                 this.eatingTicks--;
             } else {
@@ -209,7 +209,7 @@ public class Hippo extends NaturalistAnimal implements NaturalistGeoEntity {
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel serverLevel, AgeableMob ageableMob) {
-        return NaturalistEntityTypes.HIPPO.get().create(serverLevel);
+        return NaturalistEntityTypes.HIPPO.get().create(serverLevel, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Nullable
@@ -228,34 +228,35 @@ public class Hippo extends NaturalistAnimal implements NaturalistGeoEntity {
         return this.geoCache;
     }
 
-    private <E extends Hippo> PlayState predicate(final @NotNull AnimationState<E> event) {
-        event.getController().setAnimationSpeed(0.8D + event.getLimbSwingAmount());
+    private PlayState predicate(final @NotNull AnimationTest<Hippo> event) {
+        event.setControllerSpeed((float)(0.32F * Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0)));
         if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
             if (!this.isInWater()) {
                 if (this.isSprinting()) {
-                    event.getController().setAnimation(RUN);
+                    event.setAnimation(RUN);
                 } else {
-                    event.getController().setAnimation(WALK);
+                    event.setAnimation(WALK);
                 }
             } else if (this.isInWater()) {
-                event.getController().setAnimation(SWIM);
+                event.setAnimation(SWIM);
             }
             return PlayState.CONTINUE;
         } else {
             if (this.isInWater()) {
-                event.getController().setAnimation(SWIM_IDLE);
+                event.setAnimation(SWIM_IDLE);
             } else {
-                event.getController().setAnimation(IDLE);
+                event.setAnimation(IDLE);
             }
         }
         return PlayState.CONTINUE;
     }
 
-    private <E extends Hippo> PlayState attackPredicate(final AnimationState<E> event) {
-        if (this.swinging && event.getController().getAnimationState().equals(AnimationController.State.STOPPED)) {
-            event.getController().forceAnimationReset();
+    private PlayState attackPredicate(final AnimationTest<Hippo> event) {
+        if (this.swinging && event.controller().getPlayState() == PlayState.STOP) {
+            event.controller().reset();
+            
         
-            event.getController().setAnimation(BITE);
+            event.setAnimation(BITE);
             this.swinging = false;
         }
         return PlayState.CONTINUE;
@@ -263,8 +264,8 @@ public class Hippo extends NaturalistAnimal implements NaturalistGeoEntity {
 
     @Override
     public void registerControllers(final AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 5, this::predicate).setSoundKeyframeHandler(event -> {}));
-        controllers.add(new AnimationController<>(this, "attackController", 0, this::attackPredicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("attackController", 0, this::attackPredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
     }
 
 
@@ -379,7 +380,7 @@ public class Hippo extends NaturalistAnimal implements NaturalistGeoEntity {
             if (distToEnemySqr <= reach && this.ticksUntilNextAttack <= 0) {
                 this.resetAttackCooldown();
                 this.mob.swing(InteractionHand.MAIN_HAND);
-                this.mob.doHurtTarget(enemy);
+                this.mob.doHurtTarget((net.minecraft.server.level.ServerLevel) this.mob.level(), enemy);
             }
         }
 

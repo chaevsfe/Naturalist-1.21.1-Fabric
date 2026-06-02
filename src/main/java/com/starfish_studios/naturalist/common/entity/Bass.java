@@ -7,17 +7,17 @@ import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.animal.AbstractSchoolingFish;
+import net.minecraft.world.entity.animal.fish.AbstractSchoolingFish;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import com.starfish_studios.naturalist.common.entity.core.NaturalistGeoEntity;
 import org.jetbrains.annotations.NotNull;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 public class Bass extends AbstractSchoolingFish implements NaturalistGeoEntity {
@@ -44,7 +44,10 @@ public class Bass extends AbstractSchoolingFish implements NaturalistGeoEntity {
 
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.SALMON_AMBIENT;
+        // SALMON_AMBIENT is an empty sound event in modern MC (registered, no audio bound),
+        // which makes the engine log "Unable to play empty soundEvent". Return null for
+        // silence and no warning. Hurt/death/flop kept.
+        return null;
     }
 
     @Override
@@ -64,27 +67,22 @@ public class Bass extends AbstractSchoolingFish implements NaturalistGeoEntity {
 
 
     @Override
-    public double getBoneResetTime() {
-        return 2;
-    }
-
-    @Override
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return this.geoCache;
     }
 
-    protected <E extends Bass> @NotNull PlayState predicate(final AnimationState<E> event) {
+    protected @NotNull PlayState predicate(final AnimationTest<Bass> event) {
         if (!this.isInWater()) {
-            event.getController().setAnimation(FLOP);
+            event.setAnimation(FLOP);
         } else {
-            event.getController().setAnimation(SWIM);
+            event.setAnimation(SWIM);
         }
         return PlayState.CONTINUE;
     }
 
     @Override
     public void registerControllers(final AnimatableManager.@NotNull ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 2, this::predicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 2, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
     }
 
 }

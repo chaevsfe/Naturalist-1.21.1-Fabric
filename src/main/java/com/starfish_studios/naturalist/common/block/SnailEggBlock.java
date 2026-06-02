@@ -43,8 +43,8 @@ public class SnailEggBlock extends Block {
         return random.nextInt(minHatchTickDelay, maxHatchTickDelay);
     }
 
-    public BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level, BlockPos pos, BlockPos neighborPos) {
-        return super.updateShape(state, direction, neighborState, level, pos, neighborPos);
+    public BlockState updateShape(BlockState state, net.minecraft.world.level.LevelReader level, net.minecraft.world.level.ScheduledTickAccess tickView, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighborState, RandomSource random) {
+        return super.updateShape(state, level, tickView, pos, direction, neighborPos, neighborState, random);
     }
 
     public void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
@@ -72,12 +72,12 @@ public class SnailEggBlock extends Block {
         int i = random.nextInt(2, 6);
 
         for(int j = 1; j <= i; ++j) {
-            Snail snail = NaturalistEntityTypes.SNAIL.get().create(level);
+            Snail snail = NaturalistEntityTypes.SNAIL.get().create(level, net.minecraft.world.entity.EntitySpawnReason.NATURAL);
             if (snail != null) {
                 double d = (double)pos.getX() + this.getRandomSnailPositionOffset(random);
                 double e = (double)pos.getZ() + this.getRandomSnailPositionOffset(random);
                 int k = random.nextInt(1, 361);
-                snail.moveTo(d, pos.getY(), e, (float)k, 0.0F);
+                snail.snapTo(d, pos.getY(), e, (float)k, 0.0F);
                 snail.setPersistenceRequired();
                 snail.setAge(-6000);
                 level.addFreshEntity(snail);

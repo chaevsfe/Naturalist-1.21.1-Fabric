@@ -73,29 +73,12 @@ public interface Catchable {
     /** @deprecated */
     @Deprecated
     static void loadDefaultDataFromHandTag(@NotNull Mob mob, CompoundTag tag) {
-        if (tag.contains("NoAI")) {
-            mob.setNoAi(tag.getBoolean("NoAI"));
-        }
-
-        if (tag.contains("Silent")) {
-            mob.setSilent(tag.getBoolean("Silent"));
-        }
-
-        if (tag.contains("NoGravity")) {
-            mob.setNoGravity(tag.getBoolean("NoGravity"));
-        }
-
-        if (tag.contains("Glowing")) {
-            mob.setGlowingTag(tag.getBoolean("Glowing"));
-        }
-
-        if (tag.contains("Invulnerable")) {
-            mob.setInvulnerable(tag.getBoolean("Invulnerable"));
-        }
-
-        if (tag.contains("Health", 99)) {
-            mob.setHealth(tag.getFloat("Health"));
-        }
+        tag.getBoolean("NoAI").ifPresent(mob::setNoAi);
+        tag.getBoolean("Silent").ifPresent(mob::setSilent);
+        tag.getBoolean("NoGravity").ifPresent(mob::setNoGravity);
+        tag.getBoolean("Glowing").ifPresent(val -> mob.setGlowingTag(val));
+        tag.getBoolean("Invulnerable").ifPresent(mob::setInvulnerable);
+        tag.getFloat("Health").ifPresent(mob::setHealth);
 
     }
 
@@ -115,7 +98,7 @@ public interface Catchable {
                 ItemHelper.spawnItemOnEntity(player, caughtItemStack);
             }
             player.playSound(SoundEvents.ITEM_PICKUP, 0.3F, 1.0F);
-            if (!entity.level().isClientSide) {
+            if (!entity.level().isClientSide()) {
                 CriteriaTriggers.FILLED_BUCKET.trigger((ServerPlayer)player, caughtItemStack);
             }
             entity.discard();

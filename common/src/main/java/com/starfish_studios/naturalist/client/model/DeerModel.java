@@ -49,8 +49,8 @@ public class DeerModel extends GeoModel<Deer> {
         CoreGeoBone head = this.getAnimationProcessor().getBone("head");
 
         if (!entity.isEating()) {
-            head.setRotX(extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
-            head.setRotY(extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
+            head.setRotX(-extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
+            head.setRotY(-extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
         }
     }
 

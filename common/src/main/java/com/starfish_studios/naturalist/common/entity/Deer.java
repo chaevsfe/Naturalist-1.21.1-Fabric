@@ -202,25 +202,25 @@ public class Deer extends NaturalistAnimal implements NaturalistGeoEntity {
             if (this.isSprinting()) {
                 if (this.isBaby()) {
                     event.getController().setAnimation(BABY_RUN);
-                    event.getController().setAnimationSpeed(1.0D);
+                    event.getController().setAnimationSpeed(0.75D);
                 } else {
                     event.getController().setAnimation(RUN);
-                    event.getController().setAnimationSpeed(2.3D);
+                    event.getController().setAnimationSpeed(1.7D);
                 }
             } else {
                 event.getController().setAnimation(WALK);
                 if (this.isBaby()) {
-                    event.getController().setAnimationSpeed(1.2D);
+                    event.getController().setAnimationSpeed(0.9D);
                 } else {
-                    event.getController().setAnimationSpeed(1.0D);
+                    event.getController().setAnimationSpeed(0.75D);
                 }
             }
         } else {
             event.getController().setAnimation(IDLE);
             if (this.isBaby()) {
-                event.getController().setAnimationSpeed(1.5D);
+                event.getController().setAnimationSpeed(1.1D);
             } else {
-                event.getController().setAnimationSpeed(1.0D);
+                event.getController().setAnimationSpeed(0.75D);
             }
         }
         return PlayState.CONTINUE;
@@ -230,6 +230,7 @@ public class Deer extends NaturalistAnimal implements NaturalistGeoEntity {
     protected <E extends Deer> PlayState eatPredicate(final @NotNull AnimationState<E> event) {
         if (this.isEating()) {
             event.getController().setAnimation(EAT);
+            event.getController().setAnimationSpeed(1.5D);
             return PlayState.CONTINUE;
         }
         return PlayState.STOP;

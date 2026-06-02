@@ -55,7 +55,7 @@ public class BirdModel extends GeoModel<Bird> {
         EntityModelData extraDataOfType = animationState.getData(DataTickets.ENTITY_MODEL_DATA);
         CoreGeoBone head = this.getAnimationProcessor().getBone("head");
 
-        head.setRotX(extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
-        head.setRotY(extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
+        head.setRotX(-extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
+        head.setRotY(-extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
     }
 }

@@ -10,9 +10,9 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.gamerules.GameRules;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -38,9 +38,9 @@ public class AlligatorEggBlock extends TurtleEggBlock {
                 level.removeBlock(pos, false);
                 for (int j = 0; j < state.getValue(EGGS); ++j) {
                     level.levelEvent(2001, pos, Block.getId(state));
-                    Alligator alligator = NaturalistEntityTypes.ALLIGATOR.get().create(level);
+                    Alligator alligator = NaturalistEntityTypes.ALLIGATOR.get().create(level, net.minecraft.world.entity.EntitySpawnReason.NATURAL);
                     alligator.setAge(-24000);
-                    alligator.moveTo((double)pos.getX() + 0.3 + (double)j * 0.2, pos.getY(), (double)pos.getZ() + 0.3, 0.0f, 0.0f);
+                    alligator.snapTo((double)pos.getX() + 0.3 + (double)j * 0.2, pos.getY(), (double)pos.getZ() + 0.3, 0.0f, 0.0f);
                     level.addFreshEntity(alligator);
                 }
             }
@@ -49,7 +49,7 @@ public class AlligatorEggBlock extends TurtleEggBlock {
 
     @Override
     public void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean isMoving) {
-        if (!level.isClientSide) {
+        if (!level.isClientSide()) {
             level.levelEvent(2005, pos, 0);
         }
     }
@@ -67,7 +67,7 @@ public class AlligatorEggBlock extends TurtleEggBlock {
     }
 
     @Override
-    public void fallOn(Level level, BlockState state, BlockPos pos, Entity entity, float fallDistance) {
+    public void fallOn(Level level, BlockState state, BlockPos pos, Entity entity, double fallDistance) {
         if (!(entity instanceof Zombie)) {
             this.destroyEgg(level, state, pos, entity, 3);
         }
@@ -78,7 +78,7 @@ public class AlligatorEggBlock extends TurtleEggBlock {
         if (!this.canDestroyEgg(level, entity)) {
             return;
         }
-        if (!level.isClientSide && level.random.nextInt(chance) == 0 && state.is(Blocks.TURTLE_EGG)) {
+        if (!level.isClientSide() && level.random.nextInt(chance) == 0 && state.is(Blocks.TURTLE_EGG)) {
             this.decreaseEggs(level, pos, state);
         }
     }
@@ -88,7 +88,7 @@ public class AlligatorEggBlock extends TurtleEggBlock {
             if (!(entity instanceof LivingEntity)) {
                 return false;
             } else {
-                return entity instanceof Player || level.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING);
+                return entity instanceof Player || level instanceof ServerLevel sl && sl.getGameRules().get(GameRules.MOB_GRIEFING);
             }
         } else {
             return false;

@@ -9,15 +9,15 @@
       "required": false
     },
     {
-      "id": "#c:is_jungle",
+      "id": "#c:jungle",
       "required": false
     },
     {
-      "id": "#c:is_river",
+      "id": "#c:river",
       "required": false
     },
     {
-      "id": "#c:is_beach",
+      "id": "#c:beach",
       "required": false
     }
   ]

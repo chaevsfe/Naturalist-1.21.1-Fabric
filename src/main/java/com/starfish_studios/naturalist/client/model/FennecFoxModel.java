@@ -4,55 +4,29 @@ import com.starfish_studios.naturalist.Naturalist;
 import com.starfish_studios.naturalist.common.entity.FennecFox;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Mth;
-import org.jetbrains.annotations.NotNull;
-import software.bernie.geckolib.constant.DataTickets;
-import software.bernie.geckolib.cache.object.GeoBone;
-import software.bernie.geckolib.animation.AnimationState;
+import net.minecraft.resources.Identifier;
+import software.bernie.geckolib.constant.dataticket.DataTicket;
 import software.bernie.geckolib.model.GeoModel;
-import software.bernie.geckolib.model.data.EntityModelData;
+import software.bernie.geckolib.renderer.base.GeoRenderState;
 
 @Environment(EnvType.CLIENT)
 public class FennecFoxModel extends GeoModel<FennecFox> {
+    public static final DataTicket<Integer> FENNEC_VARIANT = DataTicket.create("fennec_variant", Integer.class);
+
     @Override
-    @SuppressWarnings("removal")
-    public @NotNull ResourceLocation getModelResource(FennecFox entity) {
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "geo/entity/fennec_fox.geo.json");
+    public Identifier getModelResource(GeoRenderState renderState) {
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "models/entity/fennec_fox.geo.json");
     }
 
     @Override
-    @SuppressWarnings("removal")
-    public ResourceLocation getTextureResource(@NotNull FennecFox entity) {
-        String variantName = FennecFox.VARIANT_NAMES[entity.getVariant()];
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/fennec_fox/" + variantName + ".png");
+    public Identifier getTextureResource(GeoRenderState renderState) {
+        int variant = renderState.getOrDefaultGeckolibData(FENNEC_VARIANT, 0);
+        String variantName = FennecFox.VARIANT_NAMES[Math.min(variant, FennecFox.VARIANT_NAMES.length - 1)];
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/fennec_fox/" + variantName + ".png");
     }
 
     @Override
-    public ResourceLocation getAnimationResource(FennecFox entity) {
-        return ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "animations/fennec_fox.rp_anim.json");
-    }
-
-    @Override
-    public void setCustomAnimations(FennecFox entity, long instanceId, AnimationState<FennecFox> animationState) {
-        super.setCustomAnimations(entity, instanceId, animationState);
-
-        if (animationState == null) return;
-
-        EntityModelData extraDataOfType = animationState.getData(DataTickets.ENTITY_MODEL_DATA);
-        GeoBone head = this.getAnimationProcessor().getBone("head");
-
-        if (entity.isBaby()) {
-            head.setScaleX(1.5F);
-            head.setScaleY(1.5F);
-            head.setScaleZ(1.5F);
-        } else {
-            head.setScaleX(1.0F);
-            head.setScaleY(1.0F);
-            head.setScaleZ(1.0F);
-        }
-
-        head.setRotX(extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
-        head.setRotY(extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
+    public Identifier getAnimationResource(FennecFox entity) {
+        return Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "animations/fennec_fox.rp_anim.json");
     }
 }

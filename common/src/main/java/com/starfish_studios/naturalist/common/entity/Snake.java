@@ -418,24 +418,28 @@ public class Snake extends ClimbingAnimal implements SleepingAnimal, NeutralMob,
     private <E extends Snake> @NotNull PlayState predicate(final AnimationState<E> event) {
         if (this.isSleeping()) {
             event.getController().setAnimation(SLEEP);
+            event.getController().setAnimationSpeed(0.75D);
             return PlayState.CONTINUE;
         } else if (this.isClimbing()) {
             event.getController().setAnimation(CLIMB);
+            event.getController().setAnimationSpeed(0.75D);
             return PlayState.CONTINUE;
         } else if (!(event.getLimbSwingAmount() > -0.04F && event.getLimbSwingAmount() < 0.04F)) {
             event.getController().setAnimation(MOVE);
+            event.getController().setAnimationSpeed(0.75D);
             return PlayState.CONTINUE;
         }
         event.getController().forceAnimationReset();
-        
+
         return PlayState.STOP;
     }
 
     private <E extends Snake> PlayState attackPredicate(final AnimationState<E> event) {
         if (this.swinging && event.getController().getAnimationState().equals(AnimationController.State.STOPPED)) {
             event.getController().forceAnimationReset();
-        
+
             event.getController().setAnimation(ATTACK);
+            event.getController().setAnimationSpeed(1.5D);
             this.swinging = false;
         }
         return PlayState.CONTINUE;
@@ -444,8 +448,9 @@ public class Snake extends ClimbingAnimal implements SleepingAnimal, NeutralMob,
     private <E extends Snake> @NotNull PlayState tonguePredicate(final AnimationState<E> event) {
         if (this.random.nextInt(1000) < this.ambientSoundTime && !this.isSleeping() && event.getController().getAnimationState().equals(AnimationController.State.STOPPED)) {
             event.getController().forceAnimationReset();
-        
+
             event.getController().setAnimation(TONGUE);
+            event.getController().setAnimationSpeed(1.5D);
         }
         return PlayState.CONTINUE;
     }
@@ -453,10 +458,11 @@ public class Snake extends ClimbingAnimal implements SleepingAnimal, NeutralMob,
     private <E extends Snake> @NotNull PlayState rattlePredicate(final AnimationState<E> event) {
         if (this.canRattle() && !this.isSleeping()) {
             event.getController().setAnimation(RATTLE);
+            event.getController().setAnimationSpeed(0.75D);
             return PlayState.CONTINUE;
         }
         event.getController().forceAnimationReset();
-        
+
         return PlayState.STOP;
     }
 

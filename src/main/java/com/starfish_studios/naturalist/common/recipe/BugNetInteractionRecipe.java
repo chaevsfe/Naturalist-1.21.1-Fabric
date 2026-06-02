@@ -1,6 +1,5 @@
 package com.starfish_studios.naturalist.common.recipe;
 
-import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.starfish_studios.naturalist.core.registry.NaturalistRecipes;
@@ -8,36 +7,40 @@ import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.PlacementInfo;
 import net.minecraft.world.item.crafting.Recipe;
+import net.minecraft.world.item.crafting.RecipeBookCategories;
+import net.minecraft.world.item.crafting.RecipeBookCategory;
 import net.minecraft.world.item.crafting.RecipeInput;
 import net.minecraft.world.item.crafting.RecipeSerializer;
 import net.minecraft.world.item.crafting.RecipeType;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * A "virtual" recipe used by the bug net: it isn't placed in any crafting grid.
+ * It maps an entity type to the item dropped when that entity is caught with the net.
+ * BugNetItem queries these recipes on interaction (see BugNetItem#interactLivingEntity).
+ *
+ * Behavioural port of the 1.21.1 version to the 1.21.11 Recipe API:
+ *   - getResultItem(...) / canCraftInDimensions(...) were removed from Recipe
+ *   - placementInfo() and recipeBookCategory() are now required
+ * Since this recipe never appears in a crafting grid or the recipe book,
+ * placement is NOT_PLACEABLE and we use the generic CRAFTING_MISC category.
+ */
 public record BugNetInteractionRecipe(EntityType<?> entityType, ItemStack dropStack) implements Recipe<RecipeInput> {
 
     @Override
-    public boolean matches(RecipeInput input, Level level) {
+    public boolean matches(@NotNull RecipeInput input, @NotNull Level level) {
+        // Not matched via crafting input; BugNetItem filters by entityType directly.
         return false;
     }
 
     @Override
-    public @NotNull ItemStack assemble(RecipeInput input, HolderLookup.Provider registries) {
+    public @NotNull ItemStack assemble(@NotNull RecipeInput input, HolderLookup.@NotNull Provider registries) {
         return dropStack.copy();
-    }
-
-    @Override
-    public boolean canCraftInDimensions(int width, int height) {
-        return false;
-    }
-
-    @Override
-    public @NotNull ItemStack getResultItem(HolderLookup.Provider registries) {
-        return dropStack;
     }
 
     @Override
@@ -48,6 +51,18 @@ public record BugNetInteractionRecipe(EntityType<?> entityType, ItemStack dropSt
     @Override
     public @NotNull RecipeType<?> getType() {
         return NaturalistRecipes.BUG_NET;
+    }
+
+    @Override
+    public @NotNull PlacementInfo placementInfo() {
+        // Never placed in a crafting grid.
+        return PlacementInfo.NOT_PLACEABLE;
+    }
+
+    @Override
+    public @NotNull RecipeBookCategory recipeBookCategory() {
+        // Not shown in the recipe book; any valid category satisfies the contract.
+        return RecipeBookCategories.CRAFTING_MISC;
     }
 
     public static class Serializer implements RecipeSerializer<BugNetInteractionRecipe> {

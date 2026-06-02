@@ -9,7 +9,6 @@ import com.starfish_studios.naturalist.core.registry.NaturalistEntityTypes;
 import com.starfish_studios.naturalist.core.registry.NaturalistSoundEvents;
 import com.starfish_studios.naturalist.core.registry.NaturalistTags;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -37,37 +36,39 @@ import net.minecraft.world.entity.monster.Slime;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import com.starfish_studios.naturalist.common.entity.core.NaturalistGeoEntity;
 import org.jetbrains.annotations.NotNull;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.keyframe.event.SoundKeyframeEvent;
-import software.bernie.geckolib.animation.PlayState;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.KeyFrameEvent;
+import software.bernie.geckolib.cache.animation.keyframeevent.SoundKeyframeData;
+import software.bernie.geckolib.animation.object.PlayState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import org.jetbrains.annotations.Nullable;
 import java.util.List;
-import java.util.UUID;
+import java.util.function.Predicate;
 
 public class Snake extends ClimbingAnimal implements SleepingAnimal, NeutralMob, NaturalistGeoEntity {
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
-    private static final Ingredient FOOD_ITEMS = Ingredient.of(NaturalistTags.ItemTags.SNAKE_TEMPT_ITEMS);
-    private static final Ingredient TAME_ITEMS = Ingredient.of(NaturalistTags.ItemTags.SNAKE_TAME_ITEMS);
+    private static final Predicate<ItemStack> FOOD_ITEMS = (stack) -> stack.is(NaturalistTags.ItemTags.SNAKE_TEMPT_ITEMS);
+    private static final Predicate<ItemStack> TAME_ITEMS = (stack) -> stack.is(NaturalistTags.ItemTags.SNAKE_TAME_ITEMS);
     private static final UniformInt PERSISTENT_ANGER_TIME = TimeUtil.rangeOfSeconds(20, 39);
     private static final EntityDataAccessor<Integer> REMAINING_ANGER_TIME = SynchedEntityData.defineId(Snake.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Boolean> SLEEPING = SynchedEntityData.defineId(Snake.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<Integer> EAT_COUNTER = SynchedEntityData.defineId(Snake.class, EntityDataSerializers.INT);
     @Nullable
-    private UUID persistentAngerTarget;
+    private EntityReference<LivingEntity> persistentAngerTarget;
 
     protected static final RawAnimation MOVE = RawAnimation.begin().thenPlay("animation.sf_nba.snake.move");
     protected static final RawAnimation SLEEP = RawAnimation.begin().thenLoop("animation.sf_nba.snake.sleep");
@@ -101,7 +102,7 @@ public class Snake extends ClimbingAnimal implements SleepingAnimal, NeutralMob,
         // this.goalSelector.addGoal(8, new FollowOwnerGoal(this, 1.0D, 10.0F, 2.0F, false));
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, 10, true, false, this::isAngryAt));
-        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Mob.class, 5, true, false, livingEntity -> livingEntity.getType().is(NaturalistTags.EntityTypes.SNAKE_HOSTILES) || (livingEntity instanceof Slime slime && slime.isTiny())));
+        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Mob.class, 5, true, false, (livingEntity, level) -> livingEntity.getType().is(NaturalistTags.EntityTypes.SNAKE_HOSTILES) || (livingEntity instanceof Slime slime && slime.isTiny())));
         this.targetSelector.addGoal(4, new ResetUniversalAngerTargetGoal<>(this, false));
     }
 
@@ -111,12 +112,12 @@ public class Snake extends ClimbingAnimal implements SleepingAnimal, NeutralMob,
         return null;
     }
 
-    public static boolean checkSnakeSpawnRules(EntityType<Snake> entityType, LevelAccessor level, MobSpawnType type, BlockPos pos, RandomSource random) {
+    public static boolean checkSnakeSpawnRules(EntityType<Snake> entityType, LevelAccessor level, EntitySpawnReason type, BlockPos pos, RandomSource random) {
         return level.getBlockState(pos.below()).is(BlockTags.RABBITS_SPAWNABLE_ON) && isBrightEnoughToSpawn(level, pos);
     }
 
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, EntitySpawnReason pReason, @Nullable SpawnGroupData pSpawnData) {
         this.populateDefaultEquipmentSlots(random, pDifficulty);
         return super.finalizeSpawn(pLevel, pDifficulty, pReason, pSpawnData);
     }
@@ -160,15 +161,15 @@ public class Snake extends ClimbingAnimal implements SleepingAnimal, NeutralMob,
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag pCompound) {
-        super.readAdditionalSaveData(pCompound);
-        this.readPersistentAngerSaveData(this.level(), pCompound);
+    protected void readAdditionalSaveData(ValueInput view) {
+        super.readAdditionalSaveData(view);
+        this.readPersistentAngerSaveData(this.level(), view);
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag pCompound) {
-        super.addAdditionalSaveData(pCompound);
-        this.addPersistentAngerSaveData(pCompound);
+    protected void addAdditionalSaveData(ValueOutput view) {
+        super.addAdditionalSaveData(view);
+        this.addPersistentAngerSaveData(view);
     }
 
     public boolean isEating() {
@@ -190,7 +191,7 @@ public class Snake extends ClimbingAnimal implements SleepingAnimal, NeutralMob,
     @Override
     public void aiStep() {
         super.aiStep();
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide()) {
             this.updatePersistentAnger((ServerLevel)this.level(), true);
         }
         if (this.isSleeping() || this.isImmobile()) {
@@ -216,9 +217,9 @@ public class Snake extends ClimbingAnimal implements SleepingAnimal, NeutralMob,
             this.eat(false);
         }
         if (this.isEating()) {
-            if (!this.level().isClientSide && this.getEatCounter() > 6000) {
+            if (!this.level().isClientSide() && this.getEatCounter() > 6000) {
                 if (!this.getMainHandItem().isEmpty()) {
-                    if (!this.level().isClientSide) {
+                    if (!this.level().isClientSide()) {
                         this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
                         this.gameEvent(GameEvent.EAT);
                     }
@@ -233,30 +234,30 @@ public class Snake extends ClimbingAnimal implements SleepingAnimal, NeutralMob,
     // EATING
 
     @Override
-    public boolean canTakeItem(ItemStack pItemstack) {
+    public boolean canHoldItem(ItemStack pItemstack) {
         EquipmentSlot slot = getEquipmentSlotForItem(pItemstack);
         if (!this.getItemBySlot(slot).isEmpty()) {
             return false;
         } else {
-            return slot == EquipmentSlot.MAINHAND && super.canTakeItem(pItemstack);
+            return slot == EquipmentSlot.MAINHAND && super.canHoldItem(pItemstack);
         }
     }
 
     @Override
-    protected void pickUpItem(@NotNull ItemEntity pItemEntity) {
+    protected void pickUpItem(ServerLevel serverLevel, @NotNull ItemEntity pItemEntity) {
         ItemStack stack = pItemEntity.getItem();
         if (this.getMainHandItem().isEmpty() && FOOD_ITEMS.test(stack)) {
             this.onItemPickup(pItemEntity);
             this.setItemSlot(EquipmentSlot.MAINHAND, stack);
-            this.handDropChances[EquipmentSlot.MAINHAND.getIndex()] = 2.0F;
+            this.setDropChance(EquipmentSlot.MAINHAND, 2.0F);
             this.take(pItemEntity, stack.getCount());
             pItemEntity.discard();
         }
     }
 
     @Override
-    public boolean hurt(DamageSource pSource, float pAmount) {
-        if (!this.getMainHandItem().isEmpty() && !this.level().isClientSide) {
+    public boolean hurtServer(ServerLevel serverLevel, DamageSource pSource, float pAmount) {
+        if (!this.getMainHandItem().isEmpty()) {
             ItemEntity itemEntity = new ItemEntity(this.level(), this.getX() + this.getLookAngle().x, this.getY() + 1.0D, this.getZ() + this.getLookAngle().z, this.getMainHandItem());
             itemEntity.setPickUpDelay(80);
             itemEntity.setThrower(this);
@@ -264,7 +265,7 @@ public class Snake extends ClimbingAnimal implements SleepingAnimal, NeutralMob,
             this.level().addFreshEntity(itemEntity);
             this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
         }
-        return super.hurt(pSource, pAmount);
+        return super.hurtServer(serverLevel, pSource, pAmount);
     }
 
     // MOVEMENT
@@ -305,43 +306,43 @@ public class Snake extends ClimbingAnimal implements SleepingAnimal, NeutralMob,
 
     @Override
     public void startPersistentAngerTimer() {
-        this.setRemainingPersistentAngerTime(PERSISTENT_ANGER_TIME.sample(this.random));
+        this.setTimeToRemainAngry(PERSISTENT_ANGER_TIME.sample(this.random));
     }
 
     @Override
-    public void setRemainingPersistentAngerTime(int pTime) {
-        this.entityData.set(REMAINING_ANGER_TIME, pTime);
+    public void setPersistentAngerEndTime(long pTime) {
+        this.entityData.set(REMAINING_ANGER_TIME, (int) pTime);
     }
 
     @Override
-    public int getRemainingPersistentAngerTime() {
+    public long getPersistentAngerEndTime() {
         return this.entityData.get(REMAINING_ANGER_TIME);
     }
 
     @Override
-    public void setPersistentAngerTarget(@Nullable UUID pTarget) {
+    public void setPersistentAngerTarget(@Nullable EntityReference<LivingEntity> pTarget) {
         this.persistentAngerTarget = pTarget;
     }
 
     @Nullable
     @Override
-    public UUID getPersistentAngerTarget() {
+    public EntityReference<LivingEntity> getPersistentAngerTarget() {
         return this.persistentAngerTarget;
     }
 
     // SNAKE VARIANTS
 
     @Override
-    public boolean doHurtTarget(Entity pEntity) {
+    public boolean doHurtTarget(ServerLevel serverLevel, Entity pEntity) {
         if ((this.getType().equals(NaturalistEntityTypes.CORAL_SNAKE.get()) || this.getType().equals(NaturalistEntityTypes.RATTLESNAKE.get())) && pEntity instanceof LivingEntity living) {
             living.addEffect(new MobEffectInstance(MobEffects.POISON, 40));
         }
-        return super.doHurtTarget(pEntity);
+        return super.doHurtTarget(serverLevel, pEntity);
     }
 
     private boolean canRattle() {
-        List<Player> players = this.level().getNearbyPlayers(TargetingConditions.forNonCombat().range(4.0D), this, this.getBoundingBox().inflate(4.0D, 2.0D, 4.0D));
-        if(!players.isEmpty() && this.getType().equals(NaturalistEntityTypes.RATTLESNAKE.get()) && !players.get(0).isCreative()){
+        List<Player> players = this.level().getEntitiesOfClass(Player.class, this.getBoundingBox().inflate(4.0D, 2.0D, 4.0D), player -> !player.isSpectator() && !player.isCreative() && player.isAlive());
+        if(!players.isEmpty() && this.getType().equals(NaturalistEntityTypes.RATTLESNAKE.get())){
             this.setTarget(players.get(0));
         } else {
             this.setTarget(null);
@@ -359,7 +360,7 @@ public class Snake extends ClimbingAnimal implements SleepingAnimal, NeutralMob,
     public InteractionResult mobInteract(Player player, InteractionHand hand) {
         InteractionResult interactionResult;
         ItemStack itemStack = player.getItemInHand(hand);
-        if (this.level().isClientSide) {
+        if (this.level().isClientSide()) {
             if (this.isTame() && this.isOwnedBy(player)) {
                 return InteractionResult.SUCCESS;
             }
@@ -415,55 +416,56 @@ public class Snake extends ClimbingAnimal implements SleepingAnimal, NeutralMob,
         return this.geoCache;
     }
 
-    private <E extends Snake> @NotNull PlayState predicate(final AnimationState<E> event) {
+    private @NotNull PlayState predicate(final AnimationTest<Snake> event) {
         if (this.isSleeping()) {
-            event.getController().setAnimation(SLEEP);
+            event.setAnimation(SLEEP);
             return PlayState.CONTINUE;
         } else if (this.isClimbing()) {
-            event.getController().setAnimation(CLIMB);
+            event.setAnimation(CLIMB);
             return PlayState.CONTINUE;
-        } else if (!(event.getLimbSwingAmount() > -0.04F && event.getLimbSwingAmount() < 0.04F)) {
-            event.getController().setAnimation(MOVE);
+        } else if (event.isMoving()) {
+            event.setAnimation(MOVE);
             return PlayState.CONTINUE;
         }
-        event.getController().forceAnimationReset();
         
+
         return PlayState.STOP;
     }
 
-    private <E extends Snake> PlayState attackPredicate(final AnimationState<E> event) {
-        if (this.swinging && event.getController().getAnimationState().equals(AnimationController.State.STOPPED)) {
-            event.getController().forceAnimationReset();
-        
-            event.getController().setAnimation(ATTACK);
+    private PlayState attackPredicate(final AnimationTest<Snake> event) {
+        if (this.swinging && event.controller().getPlayState() == PlayState.STOP) {
+            event.controller().reset();
+            
+
+            event.setAnimation(ATTACK);
             this.swinging = false;
         }
         return PlayState.CONTINUE;
     }
 
-    private <E extends Snake> @NotNull PlayState tonguePredicate(final AnimationState<E> event) {
-        if (this.random.nextInt(1000) < this.ambientSoundTime && !this.isSleeping() && event.getController().getAnimationState().equals(AnimationController.State.STOPPED)) {
-            event.getController().forceAnimationReset();
-        
-            event.getController().setAnimation(TONGUE);
+    private @NotNull PlayState tonguePredicate(final AnimationTest<Snake> event) {
+        if (this.random.nextInt(1000) < this.ambientSoundTime && !this.isSleeping() && event.controller().getPlayState() == PlayState.STOP) {
+            
+
+            event.setAnimation(TONGUE);
         }
         return PlayState.CONTINUE;
     }
 
-    private <E extends Snake> @NotNull PlayState rattlePredicate(final AnimationState<E> event) {
+    private @NotNull PlayState rattlePredicate(final AnimationTest<Snake> event) {
         if (this.canRattle() && !this.isSleeping()) {
-            event.getController().setAnimation(RATTLE);
+            event.setAnimation(RATTLE);
             return PlayState.CONTINUE;
         }
-        event.getController().forceAnimationReset();
         
+
         return PlayState.STOP;
     }
 
-    private void soundListener(@NotNull SoundKeyframeEvent<Snake> event) {
-        Snake snake = event.getAnimatable();
-        if (snake.level().isClientSide) {
-            if (event.getKeyframeData().getSound().equals("hiss")) {
+    private void soundListener(@NotNull KeyFrameEvent<Snake, SoundKeyframeData> event) {
+        Snake snake = event.animatable();
+        if (snake.level().isClientSide()) {
+            if (event.keyframeData().getSound().equals("hiss")) {
                 snake.level().playLocalSound(snake.getX(), snake.getY(), snake.getZ(), NaturalistSoundEvents.SNAKE_HISS.get(), snake.getSoundSource(), snake.getSoundVolume(), snake.getVoicePitch(), false);
             }
         }
@@ -471,13 +473,13 @@ public class Snake extends ClimbingAnimal implements SleepingAnimal, NeutralMob,
 
     @Override
     public void registerControllers(final AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 10, this::predicate).setSoundKeyframeHandler(this::soundListener));
-        controllers.add(new AnimationController<>(this, "attackController", 0, this::attackPredicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 10, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(this::soundListener));
+        controllers.add(new AnimationController<>("attackController", 0, this::attackPredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
 
-        AnimationController<Snake> tongueController = new AnimationController<>(this, "tongueController", 0, this::tonguePredicate);
+        AnimationController<Snake> tongueController = new AnimationController<>("tongueController", 0, this::tonguePredicate).setAnimationSpeed(1.0);
         tongueController.setSoundKeyframeHandler(this::soundListener);
         controllers.add(tongueController);
-        controllers.add(new AnimationController<>(this, "rattleController", 0, this::rattlePredicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("rattleController", 0, this::rattlePredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
     }
 
 

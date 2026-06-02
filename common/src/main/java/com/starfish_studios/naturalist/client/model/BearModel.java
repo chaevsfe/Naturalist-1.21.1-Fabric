@@ -69,9 +69,9 @@ public class BearModel extends GeoModel<Bear> {
             head.setScaleZ(1.0F);
         }
 
-        if (!entity.isSleeping() && !entity.isEating() && !entity.isSitting()) {
-            head.setRotX(extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
-            head.setRotY(extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
+        if (!entity.isSleeping() && !entity.isEating() && !entity.isSitting() && !entity.isSniffing()) {
+            head.setRotX(-extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
+            head.setRotY(-extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
         }
     }
 }

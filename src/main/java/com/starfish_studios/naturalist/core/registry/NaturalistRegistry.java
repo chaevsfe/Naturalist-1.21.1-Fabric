@@ -10,13 +10,17 @@ import com.starfish_studios.naturalist.core.platform.CommonPlatformHelper;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.item.component.Consumable;
 import net.minecraft.world.food.FoodProperties;
 import net.minecraft.world.food.Foods;
 import net.minecraft.world.item.*;
+import net.minecraft.world.item.consume_effects.ApplyStatusEffectsConsumeEffect;
 import net.minecraft.world.level.block.*;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.level.material.PushReaction;
+
+import net.minecraft.resources.ResourceKey;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -29,7 +33,14 @@ import java.util.function.Supplier;
 import static com.starfish_studios.naturalist.core.platform.CommonPlatformHelper.registerItem;
 import static com.starfish_studios.naturalist.core.platform.CommonPlatformHelper.registerMobBucketItem;
 
+
+
 public class NaturalistRegistry {
+
+    /** Convenience: creates Item.Properties with the ResourceKey already set. */
+    private static Item.Properties props(String name) {
+        return new Item.Properties().setId(CommonPlatformHelper.getItemKey(name));
+    }
 
     public static List<ItemStack> collectAllItemStacks() {
         List<ItemStack> stacks = new ArrayList<>();
@@ -66,68 +77,66 @@ public class NaturalistRegistry {
     }
 
 
-    public static final Supplier<Item> BUSHMEAT = registerItem("bushmeat", () -> new Item(new Item.Properties().food(new FoodProperties.Builder().nutrition(3).build())));
-    public static final Supplier<Item> COOKED_BUSHMEAT = registerItem("cooked_bushmeat", () -> new Item(new Item.Properties().food(new FoodProperties.Builder().nutrition(8).build())));
-    public static final Supplier<Item> FUR = registerItem("fur", () -> new Item(new Item.Properties()));
+    public static final Supplier<Item> BUSHMEAT = registerItem("bushmeat", () -> new Item(props("bushmeat").food(new FoodProperties.Builder().nutrition(3).build())));
+    public static final Supplier<Item> COOKED_BUSHMEAT = registerItem("cooked_bushmeat", () -> new Item(props("cooked_bushmeat").food(new FoodProperties.Builder().nutrition(8).build())));
+    public static final Supplier<Item> FUR = registerItem("fur", () -> new Item(props("fur")));
 
     //region BLOCKS & ITEMS
-    public static final Supplier<Block> ALLIGATOR_EGG = registerBlock("alligator_egg", () -> new AlligatorEggBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.TURTLE_EGG)));
-    public static final Supplier<Item> DUCK_EGG = registerItem("duck_egg", () -> new DuckEggItem(new Item.Properties()));
-    public static final Supplier<Block> TORTOISE_EGG = registerBlock("tortoise_egg", () -> new TortoiseEggBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.TURTLE_EGG)));
-    public static final Supplier<Item> COOKED_EGG = registerItem("cooked_egg", () -> new Item(new Item.Properties().food(Foods.BREAD)));
-    public static final Supplier<Block> SNAIL_EGGS = registerBlock("snail_eggs", () -> new SnailEggBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.FROGSPAWN)));
-//    public static final Supplier<Block> CATTAIL = registerBlock("cattail", () -> new CattailBlock(BlockBehaviour.Properties.of().noCollission().randomTicks().instabreak().sound(SoundType.SMALL_DRIPLEAF).offsetType(BlockBehaviour.OffsetType.XZ)));
-//    public static final Supplier<Item> CATTAIL_FLUFF = registerItem("cattail_fluff", () -> new Item(new Item.Properties()));
-    public static final Supplier<Item> ANTLER = registerItem("antler", () -> new Item(new Item.Properties()));
-    public static final Supplier<Block> GLOW_GOOP_BLOCK = registerBlockOnly("glow_goop", () -> new GlowGoopBlock(BlockBehaviour.Properties.of().strength(0.5F).replaceable().noOcclusion().noCollission().lightLevel(GlowGoopBlock.LIGHT_EMISSION).sound(SoundType.HONEY_BLOCK)));
-    public static final Supplier<Item> GLOW_GOOP = CommonPlatformHelper.registerItem("glow_goop", () -> new GlowGoopItem(GLOW_GOOP_BLOCK.get(), new Item.Properties()));
-    public static final Supplier<Block> TEDDY_BEAR = registerBlock("teddy_bear", () -> new TeddyBearBlock(BlockBehaviour.Properties.of().strength(0.8f).sound(SoundType.WOOL).noOcclusion()));
-    public static final Supplier<Item> DUCK = registerItem("duck", () -> new Item(new Item.Properties().food(Foods.CHICKEN)));
-    public static final Supplier<Item> COOKED_DUCK = registerItem("cooked_duck", () -> new Item(new Item.Properties().food(Foods.COOKED_CHICKEN)));
-    public static final Supplier<Item> VENISON = registerItem("venison", () -> new Item(new Item.Properties().food(Foods.MUTTON)));
-    public static final Supplier<Item> COOKED_VENISON = registerItem("cooked_venison", () -> new Item(new Item.Properties().food(Foods.COOKED_MUTTON)));
-    public static final Supplier<Item> LIZARD_TAIL = registerItem("lizard_tail", () -> new Item(new Item.Properties().food(new FoodProperties.Builder().nutrition(2).saturationModifier(0.8F).effect(new MobEffectInstance(MobEffects.POISON, 100, 0), 1.0f).build())));
-    public static final Supplier<Item> COOKED_LIZARD_TAIL = registerItem("cooked_lizard_tail", () -> new Item(new Item.Properties().food(Foods.BAKED_POTATO)));
+    public static final Supplier<Block> ALLIGATOR_EGG = registerBlock("alligator_egg", () -> new AlligatorEggBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.TURTLE_EGG).setId(CommonPlatformHelper.getBlockKey("alligator_egg"))));
+    public static final Supplier<Item> DUCK_EGG = registerItem("duck_egg", () -> new DuckEggItem(props("duck_egg")));
+    public static final Supplier<Block> TORTOISE_EGG = registerBlock("tortoise_egg", () -> new TortoiseEggBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.TURTLE_EGG).setId(CommonPlatformHelper.getBlockKey("tortoise_egg"))));
+    public static final Supplier<Item> COOKED_EGG = registerItem("cooked_egg", () -> new Item(props("cooked_egg").food(Foods.BREAD)));
+    public static final Supplier<Block> SNAIL_EGGS = registerBlock("snail_eggs", () -> new SnailEggBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.FROGSPAWN).setId(CommonPlatformHelper.getBlockKey("snail_eggs"))));
+    public static final Supplier<Item> ANTLER = registerItem("antler", () -> new Item(props("antler")));
+    public static final Supplier<Block> GLOW_GOOP_BLOCK = registerBlockOnly("glow_goop", () -> new GlowGoopBlock(BlockBehaviour.Properties.of().strength(0.5F).replaceable().noOcclusion().noCollision().lightLevel(GlowGoopBlock.LIGHT_EMISSION).sound(SoundType.HONEY_BLOCK).setId(CommonPlatformHelper.getBlockKey("glow_goop"))));
+    public static final Supplier<Item> GLOW_GOOP = CommonPlatformHelper.registerItem("glow_goop", () -> new GlowGoopItem(GLOW_GOOP_BLOCK.get(), props("glow_goop")));
+    public static final Supplier<Block> TEDDY_BEAR = registerBlock("teddy_bear", () -> new TeddyBearBlock(BlockBehaviour.Properties.of().strength(0.8f).sound(SoundType.WOOL).noOcclusion().setId(CommonPlatformHelper.getBlockKey("teddy_bear"))));
+    public static final Supplier<Item> DUCK = registerItem("duck", () -> new Item(props("duck").food(Foods.CHICKEN)));
+    public static final Supplier<Item> COOKED_DUCK = registerItem("cooked_duck", () -> new Item(props("cooked_duck").food(Foods.COOKED_CHICKEN)));
+    public static final Supplier<Item> VENISON = registerItem("venison", () -> new Item(props("venison").food(Foods.MUTTON)));
+    public static final Supplier<Item> COOKED_VENISON = registerItem("cooked_venison", () -> new Item(props("cooked_venison").food(Foods.COOKED_MUTTON)));
+    public static final Supplier<Item> LIZARD_TAIL = registerItem("lizard_tail", () -> new Item(props("lizard_tail").food(new FoodProperties.Builder().nutrition(2).saturationModifier(0.8F).build(), Consumable.builder().onConsume(new ApplyStatusEffectsConsumeEffect(new MobEffectInstance(MobEffects.POISON, 100, 0), 1.0f)).build())));
+    public static final Supplier<Item> COOKED_LIZARD_TAIL = registerItem("cooked_lizard_tail", () -> new Item(props("cooked_lizard_tail").food(Foods.BAKED_POTATO)));
     public static final Supplier<Item> CATFISH_BUCKET = registerMobBucketItem("catfish_bucket", NaturalistEntityTypes.CATFISH, () -> Fluids.WATER, () -> SoundEvents.BUCKET_EMPTY_FISH);
     public static final Supplier<Item> BASS_BUCKET = registerMobBucketItem("bass_bucket", NaturalistEntityTypes.BASS, () -> Fluids.WATER, () -> SoundEvents.BUCKET_EMPTY_FISH);
-    public static final Supplier<Item> CATFISH = registerItem("catfish", () -> new Item(new Item.Properties().food(Foods.SALMON)));
-    public static final Supplier<Item> COOKED_CATFISH = registerItem("cooked_catfish", () -> new Item(new Item.Properties().food(Foods.COOKED_SALMON)));
-    public static final Supplier<Item> BASS = registerItem("bass", () -> new Item(new Item.Properties().food(Foods.COD)));
-    public static final Supplier<Item> COOKED_BASS = registerItem("cooked_bass", () -> new Item(new Item.Properties().food(Foods.COOKED_COD)));
-    public static final Supplier<Item> BUG_NET = registerItem("bug_net", () -> new BugNetItem(new Item.Properties().durability(64)));
-    public static final Supplier<Block> CHRYSALIS_BLOCK = registerBlockOnly("chrysalis", () -> new ChrysalisBlock(BlockBehaviour.Properties.of().randomTicks().strength(0.2F, 3.0F).sound(SoundType.GRASS).noOcclusion().noCollission().pushReaction(PushReaction.DESTROY)));
-    public static final Supplier<Item> CHRYSALIS = registerItem("chrysalis", () -> new BlockItem(CHRYSALIS_BLOCK.get(), new Item.Properties().stacksTo(1)));
+    public static final Supplier<Item> CATFISH = registerItem("catfish", () -> new Item(props("catfish").food(Foods.SALMON)));
+    public static final Supplier<Item> COOKED_CATFISH = registerItem("cooked_catfish", () -> new Item(props("cooked_catfish").food(Foods.COOKED_SALMON)));
+    public static final Supplier<Item> BASS = registerItem("bass", () -> new Item(props("bass").food(Foods.COD)));
+    public static final Supplier<Item> COOKED_BASS = registerItem("cooked_bass", () -> new Item(props("cooked_bass").food(Foods.COOKED_COD)));
+    public static final Supplier<Item> BUG_NET = registerItem("bug_net", () -> new BugNetItem(props("bug_net").durability(64)));
+    public static final Supplier<Block> CHRYSALIS_BLOCK = registerBlockOnly("chrysalis", () -> new ChrysalisBlock(BlockBehaviour.Properties.of().randomTicks().strength(0.2F, 3.0F).sound(SoundType.GRASS).noOcclusion().noCollision().pushReaction(PushReaction.DESTROY).setId(CommonPlatformHelper.getBlockKey("chrysalis"))));
+    public static final Supplier<Item> CHRYSALIS = registerItem("chrysalis", () -> new BlockItem(CHRYSALIS_BLOCK.get(), props("chrysalis").stacksTo(1)));
     public static final Supplier<Item> CATERPILLAR = CommonPlatformHelper.registerCaughtMobItem("caterpillar", NaturalistEntityTypes.CATERPILLAR, () -> Fluids.EMPTY, NaturalistSoundEvents.SNAIL_FORWARD);
     public static final Supplier<Item> BUTTERFLY = CommonPlatformHelper.registerCaughtMobItem("butterfly", NaturalistEntityTypes.BUTTERFLY, () -> Fluids.EMPTY, NaturalistSoundEvents.BIRD_FLY, Butterfly.Variant.values().length);
-    public static final Supplier<Item> SNAIL_SHELL = registerItem("snail_shell", () -> new Item(new Item.Properties()));
+    public static final Supplier<Item> SNAIL_SHELL = registerItem("snail_shell", () -> new Item(props("snail_shell")));
     public static final Supplier<Item> SNAIL_BUCKET = CommonPlatformHelper.registerNoFluidMobBucketItem("snail_bucket", NaturalistEntityTypes.SNAIL, () -> Fluids.EMPTY, NaturalistSoundEvents.BUCKET_EMPTY_SNAIL, Snail.Color.values().length);
-//    public static final Supplier<Block> DUCKWEED_BLOCK = registerBlockOnly("duckweed", () -> new WaterlilyBlock(BlockBehaviour.Properties.of().noCollission().randomTicks().instabreak().sound(SoundType.SMALL_DRIPLEAF).replaceable().ignitedByLava().pushReaction(PushReaction.DESTROY)));
+//    public static final Supplier<Block> DUCKWEED_BLOCK = registerBlockOnly("duckweed", () -> new WaterlilyBlock(BlockBehaviour.Properties.of().noCollision().randomTicks().instabreak().sound(SoundType.SMALL_DRIPLEAF).replaceable().ignitedByLava().pushReaction(PushReaction.DESTROY)));
 //    public static final Supplier<Item> DUCKWEED = CommonPlatformHelper.registerItem("duckweed", () -> new PlaceOnWaterBlockItem(DUCKWEED_BLOCK.get(), new Item.Properties()));
     // endregion
 
 
-    public static final Supplier<Block> AZURE_FROGLASS = registerBlock("azure_froglass", () -> new TransparentBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.GLASS)));
-    public static final Supplier<Block> VERDANT_FROGLASS = registerBlock("verdant_froglass", () -> new TransparentBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.GLASS)));
-    public static final Supplier<Block> CRIMSON_FROGLASS = registerBlock("crimson_froglass", () -> new TransparentBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.GLASS)));
-    public static final Supplier<Block> AZURE_FROGLASS_PANE = registerBlock("azure_froglass_pane", () -> new IronBarsBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.GLASS_PANE)));
-    public static final Supplier<Block> VERDANT_FROGLASS_PANE = registerBlock("verdant_froglass_pane", () -> new IronBarsBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.GLASS_PANE)));
-    public static final Supplier<Block> CRIMSON_FROGLASS_PANE = registerBlock("crimson_froglass_pane", () -> new IronBarsBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.GLASS_PANE)));
-    public static final Supplier<Block> SHELLSTONE = registerBlock("shellstone", () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE)));
-    public static final Supplier<Block> SHELLSTONE_STAIRS = registerBlock("shellstone_stairs", () -> new StairBlock(SHELLSTONE.get().defaultBlockState(), BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE)));
-    public static final Supplier<Block> SHELLSTONE_SLAB = registerBlock("shellstone_slab", () -> new SlabBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE)));
-    public static final Supplier<Block> SHELLSTONE_WALL = registerBlock("shellstone_wall", () -> new WallBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE)));
-    public static final Supplier<Block> SHELLSTONE_BRICKS = registerBlock("shellstone_bricks", () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE)));
-    public static final Supplier<Block> SHELLSTONE_BRICK_STAIRS = registerBlock("shellstone_brick_stairs", () -> new StairBlock(SHELLSTONE_BRICKS.get().defaultBlockState(), BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE)));
-    public static final Supplier<Block> SHELLSTONE_BRICK_SLAB = registerBlock("shellstone_brick_slab", () -> new SlabBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE)));
-    public static final Supplier<Block> SHELLSTONE_BRICK_WALL = registerBlock("shellstone_brick_wall", () -> new WallBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE)));
-    public static final Supplier<Block> CUT_SHELLSTONE = registerBlock("cut_shellstone", () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE)));
-    public static final Supplier<Block> CUT_SHELLSTONE_STAIRS = registerBlock("cut_shellstone_stairs", () -> new StairBlock(CUT_SHELLSTONE.get().defaultBlockState(), BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE)));
-    public static final Supplier<Block> CUT_SHELLSTONE_SLAB = registerBlock("cut_shellstone_slab", () -> new SlabBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE)));
-    public static final Supplier<Block> CUT_SHELLSTONE_WALL = registerBlock("cut_shellstone_wall", () -> new WallBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE)));
-    public static final Supplier<Block> SMOOTH_SHELLSTONE = registerBlock("smooth_shellstone", () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE)));
-    public static final Supplier<Block> SMOOTH_SHELLSTONE_STAIRS = registerBlock("smooth_shellstone_stairs", () -> new StairBlock(SMOOTH_SHELLSTONE.get().defaultBlockState(), BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE)));
-    public static final Supplier<Block> SMOOTH_SHELLSTONE_SLAB = registerBlock("smooth_shellstone_slab", () -> new SlabBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE)));
-    public static final Supplier<Block> SMOOTH_SHELLSTONE_WALL = registerBlock("smooth_shellstone_wall", () -> new WallBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE)));
+    public static final Supplier<Block> AZURE_FROGLASS = registerBlock("azure_froglass", () -> new TransparentBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.GLASS).setId(CommonPlatformHelper.getBlockKey("azure_froglass"))));
+    public static final Supplier<Block> VERDANT_FROGLASS = registerBlock("verdant_froglass", () -> new TransparentBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.GLASS).setId(CommonPlatformHelper.getBlockKey("verdant_froglass"))));
+    public static final Supplier<Block> CRIMSON_FROGLASS = registerBlock("crimson_froglass", () -> new TransparentBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.GLASS).setId(CommonPlatformHelper.getBlockKey("crimson_froglass"))));
+    public static final Supplier<Block> AZURE_FROGLASS_PANE = registerBlock("azure_froglass_pane", () -> new IronBarsBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.GLASS_PANE).setId(CommonPlatformHelper.getBlockKey("azure_froglass_pane"))));
+    public static final Supplier<Block> VERDANT_FROGLASS_PANE = registerBlock("verdant_froglass_pane", () -> new IronBarsBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.GLASS_PANE).setId(CommonPlatformHelper.getBlockKey("verdant_froglass_pane"))));
+    public static final Supplier<Block> CRIMSON_FROGLASS_PANE = registerBlock("crimson_froglass_pane", () -> new IronBarsBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.GLASS_PANE).setId(CommonPlatformHelper.getBlockKey("crimson_froglass_pane"))));
+    public static final Supplier<Block> SHELLSTONE = registerBlock("shellstone", () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE).setId(CommonPlatformHelper.getBlockKey("shellstone"))));
+    public static final Supplier<Block> SHELLSTONE_STAIRS = registerBlock("shellstone_stairs", () -> new StairBlock(SHELLSTONE.get().defaultBlockState(), BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE).setId(CommonPlatformHelper.getBlockKey("shellstone_stairs"))));
+    public static final Supplier<Block> SHELLSTONE_SLAB = registerBlock("shellstone_slab", () -> new SlabBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE).setId(CommonPlatformHelper.getBlockKey("shellstone_slab"))));
+    public static final Supplier<Block> SHELLSTONE_WALL = registerBlock("shellstone_wall", () -> new WallBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE).setId(CommonPlatformHelper.getBlockKey("shellstone_wall"))));
+    public static final Supplier<Block> SHELLSTONE_BRICKS = registerBlock("shellstone_bricks", () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE).setId(CommonPlatformHelper.getBlockKey("shellstone_bricks"))));
+    public static final Supplier<Block> SHELLSTONE_BRICK_STAIRS = registerBlock("shellstone_brick_stairs", () -> new StairBlock(SHELLSTONE_BRICKS.get().defaultBlockState(), BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE).setId(CommonPlatformHelper.getBlockKey("shellstone_brick_stairs"))));
+    public static final Supplier<Block> SHELLSTONE_BRICK_SLAB = registerBlock("shellstone_brick_slab", () -> new SlabBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE).setId(CommonPlatformHelper.getBlockKey("shellstone_brick_slab"))));
+    public static final Supplier<Block> SHELLSTONE_BRICK_WALL = registerBlock("shellstone_brick_wall", () -> new WallBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE).setId(CommonPlatformHelper.getBlockKey("shellstone_brick_wall"))));
+    public static final Supplier<Block> CUT_SHELLSTONE = registerBlock("cut_shellstone", () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE).setId(CommonPlatformHelper.getBlockKey("cut_shellstone"))));
+    public static final Supplier<Block> CUT_SHELLSTONE_STAIRS = registerBlock("cut_shellstone_stairs", () -> new StairBlock(CUT_SHELLSTONE.get().defaultBlockState(), BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE).setId(CommonPlatformHelper.getBlockKey("cut_shellstone_stairs"))));
+    public static final Supplier<Block> CUT_SHELLSTONE_SLAB = registerBlock("cut_shellstone_slab", () -> new SlabBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE).setId(CommonPlatformHelper.getBlockKey("cut_shellstone_slab"))));
+    public static final Supplier<Block> CUT_SHELLSTONE_WALL = registerBlock("cut_shellstone_wall", () -> new WallBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE).setId(CommonPlatformHelper.getBlockKey("cut_shellstone_wall"))));
+    public static final Supplier<Block> SMOOTH_SHELLSTONE = registerBlock("smooth_shellstone", () -> new Block(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE).setId(CommonPlatformHelper.getBlockKey("smooth_shellstone"))));
+    public static final Supplier<Block> SMOOTH_SHELLSTONE_STAIRS = registerBlock("smooth_shellstone_stairs", () -> new StairBlock(SMOOTH_SHELLSTONE.get().defaultBlockState(), BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE).setId(CommonPlatformHelper.getBlockKey("smooth_shellstone_stairs"))));
+    public static final Supplier<Block> SMOOTH_SHELLSTONE_SLAB = registerBlock("smooth_shellstone_slab", () -> new SlabBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE).setId(CommonPlatformHelper.getBlockKey("smooth_shellstone_slab"))));
+    public static final Supplier<Block> SMOOTH_SHELLSTONE_WALL = registerBlock("smooth_shellstone_wall", () -> new WallBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.SANDSTONE).setId(CommonPlatformHelper.getBlockKey("smooth_shellstone_wall"))));
 
 
     //region SPAWN EGGS
@@ -174,7 +183,7 @@ public class NaturalistRegistry {
 
     public static <T extends Block> Supplier<T> registerBlock(String name, Supplier<T> block) {
         Supplier<T> supplier = CommonPlatformHelper.registerBlock(name, block);
-        registerItem(name, () -> new BlockItem(supplier.get(), new Item.Properties()));
+        registerItem(name, () -> new BlockItem(supplier.get(), props(name)));
         return supplier;
     }
 

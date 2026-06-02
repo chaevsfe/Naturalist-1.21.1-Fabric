@@ -7,11 +7,11 @@
       "required": false
     },
     {
-      "id": "#c:is_forest",
+      "id": "#c:forest",
       "required": false
     },
     {
-      "id": "#c:is_taiga",
+      "id": "#c:taiga",
       "required": false
     }
   ]

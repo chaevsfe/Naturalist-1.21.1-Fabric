@@ -4,7 +4,7 @@ import com.starfish_studios.naturalist.Naturalist;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
@@ -27,7 +27,7 @@ public class NaturalistTags {
 
 
         private static TagKey<Block> tag(@NotNull String name) {
-            return TagKey.create(BuiltInRegistries.BLOCK.key(), ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, name));
+            return TagKey.create(BuiltInRegistries.BLOCK.key(), Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, name));
         }
     }
 
@@ -55,7 +55,7 @@ public class NaturalistTags {
         public static final TagKey<Item> DUCK_FOOD_ITEMS = tag("duck_food_items");
 
         private static TagKey<Item> tag(String name) {
-            return TagKey.create(BuiltInRegistries.ITEM.key(), ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, name));
+            return TagKey.create(BuiltInRegistries.ITEM.key(), Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, name));
         }
     }
 
@@ -75,7 +75,7 @@ public class NaturalistTags {
         public static final TagKey<EntityType<?>> NATURALIST_ENTITIES = tag("naturalist_entities");
 
         private static @NotNull TagKey<EntityType<?>> tag(String name) {
-            return TagKey.create(BuiltInRegistries.ENTITY_TYPE.key(), ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, name));
+            return TagKey.create(BuiltInRegistries.ENTITY_TYPE.key(), Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, name));
         }
     }
 
@@ -149,7 +149,7 @@ public class NaturalistTags {
         public static final TagKey<Biome> BLACKLIST_FENNEC_FOX = tag("blacklist/blacklist_fennec_fox");
 
         private static @NotNull TagKey<Biome> tag(String name) {
-            return TagKey.create(Registries.BIOME, ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, name));
+            return TagKey.create(Registries.BIOME, Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, name));
         }
     }
 }

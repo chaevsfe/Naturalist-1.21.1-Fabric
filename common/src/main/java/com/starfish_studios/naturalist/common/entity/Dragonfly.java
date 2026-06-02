@@ -224,6 +224,7 @@ public class Dragonfly extends PathfinderMob implements NaturalistGeoEntity {
 
     protected <E extends Dragonfly> PlayState predicate(final AnimationState<E> event) {
         event.getController().setAnimation(FLY);
+        event.getController().setAnimationSpeed(0.75D);
         return PlayState.CONTINUE;
     }
 

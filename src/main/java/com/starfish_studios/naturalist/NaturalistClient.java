@@ -4,21 +4,25 @@ import com.starfish_studios.naturalist.client.renderer.*;
 import com.starfish_studios.naturalist.core.platform.ClientPlatformHelper;
 import com.starfish_studios.naturalist.core.registry.NaturalistEntityTypes;
 import com.starfish_studios.naturalist.core.registry.NaturalistRegistry;
-import net.minecraft.client.renderer.RenderType;
+import net.fabricmc.fabric.api.client.rendering.v1.BlockRenderLayerMap;
+import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
 
 public class NaturalistClient {
     public static void init() {
-        ClientPlatformHelper.setRenderLayer(NaturalistRegistry.CHRYSALIS_BLOCK, RenderType.cutout());
-        ClientPlatformHelper.setRenderLayer(NaturalistRegistry.AZURE_FROGLASS, RenderType.translucent());
-        ClientPlatformHelper.setRenderLayer(NaturalistRegistry.AZURE_FROGLASS_PANE, RenderType.translucent());
-        ClientPlatformHelper.setRenderLayer(NaturalistRegistry.VERDANT_FROGLASS, RenderType.translucent());
-        ClientPlatformHelper.setRenderLayer(NaturalistRegistry.VERDANT_FROGLASS_PANE, RenderType.translucent());
-        ClientPlatformHelper.setRenderLayer(NaturalistRegistry.CRIMSON_FROGLASS, RenderType.translucent());
-        ClientPlatformHelper.setRenderLayer(NaturalistRegistry.CRIMSON_FROGLASS_PANE, RenderType.translucent());
-        ClientPlatformHelper.setRenderLayer(NaturalistRegistry.SNAIL_EGGS, RenderType.cutout());
-
-//        ClientPlatformHelper.setRenderLayer(NaturalistRegistry.CATTAIL, RenderType.cutout());
-//        ClientPlatformHelper.setRenderLayer(NaturalistRegistry.DUCKWEED_BLOCK, RenderType.cutout());
+        // Block render layers
+        BlockRenderLayerMap.putBlocks(ChunkSectionLayer.TRANSLUCENT,
+                NaturalistRegistry.AZURE_FROGLASS.get(),
+                NaturalistRegistry.VERDANT_FROGLASS.get(),
+                NaturalistRegistry.CRIMSON_FROGLASS.get(),
+                NaturalistRegistry.AZURE_FROGLASS_PANE.get(),
+                NaturalistRegistry.VERDANT_FROGLASS_PANE.get(),
+                NaturalistRegistry.CRIMSON_FROGLASS_PANE.get()
+        );
+        BlockRenderLayerMap.putBlocks(ChunkSectionLayer.CUTOUT,
+                NaturalistRegistry.CHRYSALIS_BLOCK.get(),
+                NaturalistRegistry.GLOW_GOOP_BLOCK.get(),
+                NaturalistRegistry.SNAIL_EGGS.get()
+        );
 
         ClientPlatformHelper.registerEntityRenderers(NaturalistEntityTypes.SNAIL, SnailRenderer::new);
         ClientPlatformHelper.registerEntityRenderers(NaturalistEntityTypes.BEAR, BearRenderer::new);
@@ -30,7 +34,6 @@ public class NaturalistClient {
         ClientPlatformHelper.registerEntityRenderers(NaturalistEntityTypes.DEER, DeerRenderer::new);
 
         // BIRDS
-
         ClientPlatformHelper.registerEntityRenderers(NaturalistEntityTypes.BLUEJAY, BirdRenderer::new);
         ClientPlatformHelper.registerEntityRenderers(NaturalistEntityTypes.CARDINAL, BirdRenderer::new);
         ClientPlatformHelper.registerEntityRenderers(NaturalistEntityTypes.CANARY, BirdRenderer::new);

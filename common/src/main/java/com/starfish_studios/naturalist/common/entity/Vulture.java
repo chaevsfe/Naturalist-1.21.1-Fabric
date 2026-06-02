@@ -288,6 +288,7 @@ public class Vulture extends PathfinderMob implements NaturalistGeoEntity, Flyin
 
     private <E extends Vulture> PlayState predicate(final AnimationState<E> event) {
         event.getController().setAnimation(FLY);
+        event.getController().setAnimationSpeed(0.75D);
         return PlayState.CONTINUE;
     }
 

@@ -1,32 +1,42 @@
 package com.starfish_studios.naturalist.client.renderer.layers;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.starfish_studios.naturalist.Naturalist;
 import com.starfish_studios.naturalist.common.entity.Firefly;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.ResourceLocation;
-import software.bernie.geckolib.cache.object.BakedGeoModel;
-import software.bernie.geckolib.renderer.GeoRenderer;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.resources.Identifier;
+import software.bernie.geckolib.constant.dataticket.DataTicket;
+import software.bernie.geckolib.renderer.base.GeoRenderState;
+import software.bernie.geckolib.renderer.base.GeoRenderer;
+import software.bernie.geckolib.renderer.base.RenderPassInfo;
 import software.bernie.geckolib.renderer.layer.GeoRenderLayer;
 
 @Environment(EnvType.CLIENT)
-public class FireflyGlowLayer extends GeoRenderLayer<Firefly> {
-    private static final ResourceLocation GLOW = ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/firefly/glow.png");
-    private static final ResourceLocation MODEL = ResourceLocation.fromNamespaceAndPath(Naturalist.MOD_ID, "geo/entity/firefly.geo.json");
+public class FireflyGlowLayer<R extends LivingEntityRenderState & GeoRenderState> extends GeoRenderLayer<Firefly, Void, R> {
+    private static final Identifier GLOW = Identifier.fromNamespaceAndPath(Naturalist.MOD_ID, "textures/entity/firefly/glow.png");
+    public static final DataTicket<Boolean> IS_GLOWING = DataTicket.create("firefly_is_glowing", Boolean.class);
 
-    public FireflyGlowLayer(GeoRenderer<Firefly> entityRendererIn) {
+    public FireflyGlowLayer(GeoRenderer<Firefly, Void, R> entityRendererIn) {
         super(entityRendererIn);
     }
 
     @Override
-    public void render(PoseStack poseStack, Firefly entity, BakedGeoModel bakedModel, RenderType renderType, MultiBufferSource bufferSource, VertexConsumer buffer, float partialTicks, int packedLightIn, int packedOverlay) {
-        RenderType glow = entity.isGlowing() ? RenderType.eyes(GLOW) : RenderType.entityCutoutNoCull(GLOW);
+    public void addRenderData(Firefly animatable, Void relatedObject, R renderState, float partialTick) {
+        renderState.addGeckolibData(IS_GLOWING, animatable.isGlowing());
+    }
 
-        getRenderer().reRender(getDefaultBakedModel(entity), poseStack, bufferSource, entity, glow, bufferSource.getBuffer(glow), partialTicks, packedLightIn, OverlayTexture.NO_OVERLAY, -1);
+    @Override
+    public void submitRenderTask(RenderPassInfo<R> renderPassInfo, SubmitNodeCollector renderTasks) {
+        if (!renderPassInfo.willRender())
+            return;
+
+        Boolean glowing = renderPassInfo.renderState().getOrDefaultGeckolibData(IS_GLOWING, false);
+        RenderType renderType = glowing ? RenderTypes.eyes(GLOW) : RenderTypes.entityCutoutNoCull(GLOW);
+
+        this.renderer.submitRenderTasks(renderPassInfo, renderTasks.order(1), renderType);
     }
 }

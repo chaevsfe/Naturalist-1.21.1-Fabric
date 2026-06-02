@@ -1,33 +1,24 @@
 package com.starfish_studios.naturalist.client.renderer;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.starfish_studios.naturalist.client.model.ButterflyModel;
-import com.starfish_studios.naturalist.common.entity.Alligator;
 import com.starfish_studios.naturalist.common.entity.Butterfly;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.resources.ResourceLocation;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
+import software.bernie.geckolib.renderer.base.GeoRenderState;
 
 @Environment(EnvType.CLIENT)
-public class ButterflyRenderer extends GeoEntityRenderer<Butterfly> {
+public class ButterflyRenderer<R extends LivingEntityRenderState & GeoRenderState> extends GeoEntityRenderer<Butterfly, R> {
     public ButterflyRenderer(EntityRendererProvider.Context renderManager) {
         super(renderManager, new ButterflyModel());
         this.shadowRadius = 0.4F;
     }
 
     @Override
-    public float getMotionAnimThreshold(Butterfly animatable) {
-        return 0.000001f;
-    }
-
-   public @NotNull RenderType getRenderType(Butterfly entity, float partialTicks, PoseStack stack, @Nullable MultiBufferSource renderTypeBuffer, @Nullable VertexConsumer vertexBuilder, int packedLightIn, @NotNull ResourceLocation textureLocation) {
-        return RenderType.entityCutoutNoCull(textureLocation);
+    public void extractRenderState(Butterfly entity, R renderState, float partialTick) {
+        super.extractRenderState(entity, renderState, partialTick);
+        renderState.addGeckolibData(ButterflyModel.BUTTERFLY_VARIANT_NAME, entity.getVariant().getName());
     }
 }

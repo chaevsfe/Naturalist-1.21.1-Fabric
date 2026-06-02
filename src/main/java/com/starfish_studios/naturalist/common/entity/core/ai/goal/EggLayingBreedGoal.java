@@ -8,7 +8,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.ExperienceOrb;
 import net.minecraft.world.entity.ai.goal.BreedGoal;
 import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.gamerules.GameRules;
 
 public class EggLayingBreedGoal<T extends Animal & EggLayingAnimal> extends BreedGoal {
     private final T animal;
@@ -37,7 +37,7 @@ public class EggLayingBreedGoal<T extends Animal & EggLayingAnimal> extends Bree
         this.animal.resetLove();
         this.partner.resetLove();
         RandomSource randomSource = this.animal.getRandom();
-        if (this.level.getGameRules().getBoolean(GameRules.RULE_DOMOBLOOT)) {
+        if (this.level instanceof net.minecraft.server.level.ServerLevel sl && sl.getGameRules().get(GameRules.MOB_DROPS)) {
             this.level.addFreshEntity(new ExperienceOrb(this.level, this.animal.getX(), this.animal.getY(), this.animal.getZ(), randomSource.nextInt(7) + 1));
         }
     }

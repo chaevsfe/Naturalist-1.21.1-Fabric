@@ -303,20 +303,23 @@ public class Tortoise extends TamableAnimal implements NaturalistGeoEntity, Hidi
     private <T extends Tortoise> PlayState predicate(final AnimationState<T> event) {
         if (this.isInSittingPose()) {
             event.getController().setAnimation(SIT);
+            event.getController().setAnimationSpeed(0.75D);
             return PlayState.CONTINUE;
         } else if (this.isLayingEgg())  {
             event.getController().setAnimation(DIG);
+            event.getController().setAnimationSpeed(0.75D);
             return PlayState.CONTINUE;
         } else if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
             event.getController().setAnimation(WALK);
             if (this.isBaby()) {
-                event.getController().setAnimationSpeed(2.0D);
+                event.getController().setAnimationSpeed(1.5D);
             } else {
-                event.getController().setAnimationSpeed(1.3D);
+                event.getController().setAnimationSpeed(1.0D);
             }
             return PlayState.CONTINUE;
         } else {
             event.getController().setAnimation(IDLE);
+            event.getController().setAnimationSpeed(0.75D);
             return PlayState.CONTINUE;
         }
     }
@@ -324,6 +327,7 @@ public class Tortoise extends TamableAnimal implements NaturalistGeoEntity, Hidi
     private <T extends Tortoise> PlayState hidePredicate(final @NotNull AnimationState<T> event) {
         if( this.canHide()) {
             event.getController().setAnimation(HIDE);
+            event.getController().setAnimationSpeed(1.5D);
             return PlayState.CONTINUE;
         }
         event.getController().forceAnimationReset();
@@ -334,10 +338,11 @@ public class Tortoise extends TamableAnimal implements NaturalistGeoEntity, Hidi
     private <T extends Tortoise> PlayState hurtPredicate(final AnimationState<T> event) {
         if(this.hurtTime > 0) {
             event.getController().setAnimation(HURT);
+            event.getController().setAnimationSpeed(1.5D);
             return PlayState.CONTINUE;
         }
         event.getController().forceAnimationReset();
-        
+
         return PlayState.STOP;
     }
 

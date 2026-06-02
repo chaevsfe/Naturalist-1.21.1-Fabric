@@ -44,7 +44,10 @@ public class Bass extends AbstractSchoolingFish implements NaturalistGeoEntity {
 
     @Override
     protected SoundEvent getAmbientSound() {
-        return SoundEvents.SALMON_AMBIENT;
+        // SALMON_AMBIENT is an empty sound event in modern MC (registered, no audio bound),
+        // which makes the engine log "Unable to play empty soundEvent". Return null for
+        // silence and no warning. Hurt/death/flop kept.
+        return null;
     }
 
     @Override
@@ -76,8 +79,10 @@ public class Bass extends AbstractSchoolingFish implements NaturalistGeoEntity {
     protected <E extends Bass> @NotNull PlayState predicate(final AnimationState<E> event) {
         if (!this.isInWater()) {
             event.getController().setAnimation(FLOP);
+            event.getController().setAnimationSpeed(0.75D);
         } else {
             event.getController().setAnimation(SWIM);
+            event.getController().setAnimationSpeed(0.75D);
         }
         return PlayState.CONTINUE;
     }

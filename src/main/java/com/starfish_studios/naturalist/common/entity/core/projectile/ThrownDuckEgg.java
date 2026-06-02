@@ -7,7 +7,7 @@ import net.minecraft.core.particles.ItemParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.projectile.ThrowableItemProjectile;
+import net.minecraft.world.entity.projectile.throwableitemprojectile.ThrowableItemProjectile;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.EntityHitResult;
@@ -20,11 +20,11 @@ public class ThrownDuckEgg extends ThrowableItemProjectile {
     }
 
     public ThrownDuckEgg(Level level, LivingEntity livingEntity) {
-        super(NaturalistEntityTypes.DUCK_EGG.get(), livingEntity, level);
+        super(NaturalistEntityTypes.DUCK_EGG.get(), livingEntity, level, new net.minecraft.world.item.ItemStack(NaturalistRegistry.DUCK_EGG.get()));
     }
 
     public ThrownDuckEgg(@NotNull Level level, double d, double e, double f) {
-        super(NaturalistEntityTypes.DUCK_EGG.get(), d, e, f, level);
+        super(NaturalistEntityTypes.DUCK_EGG.get(), d, e, f, level, new net.minecraft.world.item.ItemStack(NaturalistRegistry.DUCK_EGG.get()));
     }
 
     public void handleEntityEvent(byte id) {
@@ -46,7 +46,7 @@ public class ThrownDuckEgg extends ThrowableItemProjectile {
     @Override
     protected void onHit(HitResult result) {
         super.onHit(result);
-        if (!this.level().isClientSide) {
+        if (!this.level().isClientSide()) {
             if (this.random.nextInt(8) == 0) {
                 int i = 1;
                 if (this.random.nextInt(32) == 0) {
@@ -54,9 +54,9 @@ public class ThrownDuckEgg extends ThrowableItemProjectile {
                 }
 
                 for (int j = 0; j < i; ++j) {
-                    Duck duck = NaturalistEntityTypes.DUCK.get().create(this.level());
+                    Duck duck = NaturalistEntityTypes.DUCK.get().create(this.level(), net.minecraft.world.entity.EntitySpawnReason.SPAWN_ITEM_USE);
                     duck.setAge(-24000);
-                    duck.moveTo(this.getX(), this.getY(), this.getZ(), this.getYRot(), 0.0F);
+                    duck.snapTo(this.getX(), this.getY(), this.getZ(), this.getYRot(), 0.0F);
                     this.level().addFreshEntity(duck);
                 }
             }

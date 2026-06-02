@@ -5,7 +5,7 @@ import com.starfish_studios.naturalist.common.entity.core.ai.goal.AttackTortoise
 import com.starfish_studios.naturalist.core.registry.NaturalistRegistry;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.monster.Monster;
-import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.entity.monster.zombie.Zombie;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 import org.spongepowered.asm.mixin.Mixin;

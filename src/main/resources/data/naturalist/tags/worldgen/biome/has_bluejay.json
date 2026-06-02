@@ -18,19 +18,19 @@
       "required": false
     },
     {
-      "id": "#c:is_taiga",
+      "id": "#c:taiga",
       "required": false
     },
     {
-      "id": "#c:is_icy",
+      "id": "#c:icy",
       "required": false
     },
     {
-      "id": "#c:is_snowy",
+      "id": "#c:snowy",
       "required": false
     },
     {
-      "id": "#c:is_hill",
+      "id": "#c:extreme_hills",
       "required": false
       
     },

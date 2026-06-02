@@ -35,15 +35,17 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelReader;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import com.starfish_studios.naturalist.common.entity.core.NaturalistGeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 public class Caterpillar extends ClimbingAnimal implements NaturalistGeoEntity, Catchable {
@@ -70,7 +72,7 @@ public class Caterpillar extends ClimbingAnimal implements NaturalistGeoEntity, 
     }
 
     @Override
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, MobSpawnType pReason, @Nullable SpawnGroupData pSpawnData) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor pLevel, DifficultyInstance pDifficulty, EntitySpawnReason pReason, @Nullable SpawnGroupData pSpawnData) {
         this.setAge(0);
         return super.finalizeSpawn(pLevel, pDifficulty, pReason, pSpawnData);
     }
@@ -92,12 +94,7 @@ public class Caterpillar extends ClimbingAnimal implements NaturalistGeoEntity, 
     }
 
     @Override
-    public float getScale() {
-        return 1.0f;
-    }
-
-    @Override
-    public boolean causeFallDamage(float pFallDistance, float pMultiplier, DamageSource pSource) {
+    public boolean causeFallDamage(double pFallDistance, float pMultiplier, DamageSource pSource) {
         return false;
     }
 
@@ -109,21 +106,21 @@ public class Caterpillar extends ClimbingAnimal implements NaturalistGeoEntity, 
         return this.geoCache;
     }
 
-    protected <E extends Caterpillar> PlayState predicate(final AnimationState<E> event) {
+    protected PlayState predicate(final AnimationTest<Caterpillar> event) {
         if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
             {
-                event.getController().setAnimation(CRAWL);
+                event.setAnimation(CRAWL);
                 return PlayState.CONTINUE;
             }
         } else {
-            event.getController().setAnimation(IDLE);
+            event.setAnimation(IDLE);
             return PlayState.CONTINUE;
         }
     }
 
     @Override
     public void registerControllers(final AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 5, this::predicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
     }
 
     public ItemStack getHandItemStack() {
@@ -138,14 +135,14 @@ public class Caterpillar extends ClimbingAnimal implements NaturalistGeoEntity, 
         builder.define(FROM_HAND, false);
     }
 
-    public void addAdditionalSaveData(CompoundTag compound) {
-        super.addAdditionalSaveData(compound);
-        compound.putBoolean("FromHand", this.fromHand());
+    protected void addAdditionalSaveData(ValueOutput view) {
+        super.addAdditionalSaveData(view);
+        view.putBoolean("FromHand", this.fromHand());
     }
 
-    public void readAdditionalSaveData(CompoundTag compound) {
-        super.readAdditionalSaveData(compound);
-        this.setFromHand(compound.getBoolean("FromHand"));
+    protected void readAdditionalSaveData(ValueInput view) {
+        super.readAdditionalSaveData(view);
+        this.setFromHand(view.getBooleanOr("FromHand", false));
     }
 
     public void saveToHandTag(ItemStack stack) {
@@ -158,10 +155,7 @@ public class Caterpillar extends ClimbingAnimal implements NaturalistGeoEntity, 
 
     public void loadFromHandTag(CompoundTag tag) {
         Catchable.loadDefaultDataFromHandTag(this, tag);
-
-        if (tag.contains("Age")) {
-            this.setAge(tag.getInt("Age"));
-        }
+        tag.getInt("Age").ifPresent(this::setAge);
     }
 
     public boolean fromHand() {
@@ -239,7 +233,7 @@ public class Caterpillar extends ClimbingAnimal implements NaturalistGeoEntity, 
             caterpillar.getLookControl().setLookAt(logPos.getX() + 0.5D, logPos.getY() + 1, logPos.getZ() + 0.5D, 10.0F, this.caterpillar.getMaxHeadXRot());
             Level level = caterpillar.level();
             if (this.isValidTarget(level, caterpillar.blockPosition())) {
-                if (!level.isClientSide) {
+                if (!level.isClientSide()) {
                     ((ServerLevel) level).sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, NaturalistRegistry.CHRYSALIS_BLOCK.get().defaultBlockState()), caterpillar.getX(), caterpillar.getY(), caterpillar.getZ(), 50, caterpillar.getBbWidth() / 4.0F, caterpillar.getBbHeight() / 4.0F, caterpillar.getBbWidth() / 4.0F, 0.05D);
                 }
                 caterpillar.discard();

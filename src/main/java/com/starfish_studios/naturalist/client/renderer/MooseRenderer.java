@@ -1,26 +1,24 @@
 package com.starfish_studios.naturalist.client.renderer;
 
-import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
-import com.starfish_studios.naturalist.client.model.BearModel;
 import com.starfish_studios.naturalist.client.model.MooseModel;
-import com.starfish_studios.naturalist.client.renderer.layers.BearShearedLayer;
 import com.starfish_studios.naturalist.common.entity.Moose;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
-import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.item.ItemDisplayContext;
-import org.jetbrains.annotations.NotNull;
-import org.joml.Quaternionf;
-import software.bernie.geckolib.cache.object.GeoBone;
+import net.minecraft.client.renderer.entity.state.LivingEntityRenderState;
+import net.minecraft.util.Mth;
+import software.bernie.geckolib.constant.DataTickets;
+import software.bernie.geckolib.constant.dataticket.DataTicket;
 import software.bernie.geckolib.renderer.GeoEntityRenderer;
+import software.bernie.geckolib.renderer.base.BoneSnapshots;
+import software.bernie.geckolib.renderer.base.GeoRenderState;
+import software.bernie.geckolib.renderer.base.RenderPassInfo;
 
 @Environment(EnvType.CLIENT)
-public class MooseRenderer extends GeoEntityRenderer<Moose> {
+public class MooseRenderer<R extends LivingEntityRenderState & GeoRenderState> extends GeoEntityRenderer<Moose, R> {
+    public static final DataTicket<Boolean> IS_BABY = DataTicket.create("moose_is_baby", Boolean.class);
+    public static final DataTicket<Boolean> MOOSE_SADDLED = DataTicket.create("moose_saddled", Boolean.class);
+
     public MooseRenderer(EntityRendererProvider.Context renderManager) {
         super(renderManager, new MooseModel());
         this.shadowRadius = 0.6F;
@@ -32,19 +30,42 @@ public class MooseRenderer extends GeoEntityRenderer<Moose> {
     }
 
     @Override
-    public void render(@NotNull Moose entity, float entityYaw, float partialTick, PoseStack poseStack, MultiBufferSource bufferSource, int packedLight) {
-        if (entity.isBaby()) {
-            poseStack.scale(0.5F, 0.5F, 0.5F);
-        }
-        else {
-            poseStack.scale(1.0F, 1.0F, 1.0F);
-        }
-        super.render(entity, entityYaw, partialTick, poseStack, bufferSource, packedLight);
+    public void extractRenderState(Moose entity, R renderState, float partialTick) {
+        super.extractRenderState(entity, renderState, partialTick);
+        renderState.addGeckolibData(MOOSE_SADDLED, entity.isSaddled());
+        renderState.addGeckolibData(IS_BABY, entity.isBaby());
     }
 
     @Override
-    public void renderRecursively(PoseStack stack, Moose entity, GeoBone bone, RenderType renderType, MultiBufferSource bufferSource, VertexConsumer buffer, boolean isReRender, float partialTick, int packedLight,
-    int packedOverlay, int colour) {
-        super.renderRecursively(stack, entity, bone, renderType, bufferSource, buffer, isReRender, partialTick, packedLight, packedOverlay, colour);
+    public void scaleModelForRender(RenderPassInfo<R> renderPassInfo, float widthScale, float heightScale) {
+        Boolean baby = renderPassInfo.renderState().getGeckolibData(IS_BABY);
+        if (baby != null && baby) {
+            super.scaleModelForRender(renderPassInfo, 0.5f, 0.5f);
+        } else {
+            super.scaleModelForRender(renderPassInfo, widthScale, heightScale);
+        }
+    }
+
+    @Override
+    public void adjustModelBonesForRender(RenderPassInfo<R> renderPassInfo, BoneSnapshots boneSnapshots) {
+        super.adjustModelBonesForRender(renderPassInfo, boneSnapshots);
+        Boolean baby = renderPassInfo.renderState().getGeckolibData(IS_BABY);
+        if (baby != null && baby) {
+            boneSnapshots.ifPresent("head", snapshot -> snapshot.setScale(1.6f, 1.6f, 1.6f));
+        }
+
+        Boolean saddled = renderPassInfo.renderState().getGeckolibData(MOOSE_SADDLED);
+        if (saddled == null || !saddled) {
+            boneSnapshots.ifPresent("saddle", snapshot -> snapshot.setScale(0, 0, 0));
+        }
+
+        // Head tracking
+        float pitch = renderPassInfo.getOrDefaultGeckolibData(DataTickets.ENTITY_PITCH, 0f);
+        float yaw = renderPassInfo.getOrDefaultGeckolibData(DataTickets.ENTITY_YAW, 0f);
+        float netHeadYaw = yaw;
+        boneSnapshots.ifPresent("head", snapshot -> {
+            snapshot.setRotX(pitch * Mth.DEG_TO_RAD);
+            snapshot.setRotY(netHeadYaw * Mth.DEG_TO_RAD);
+        });
     }
 }

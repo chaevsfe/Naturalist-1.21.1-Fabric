@@ -393,23 +393,25 @@ public class Giraffe extends NaturalistAnimal implements NaturalistGeoEntity {
 
     private <E extends Giraffe> PlayState predicate(final AnimationState<E> event) {
         if (this.isBaby()) {
-            event.setControllerSpeed(1.4f + event.getLimbSwingAmount());
+            event.setControllerSpeed(1.05f + event.getLimbSwingAmount() * 0.75f);
         } else {
-            event.setControllerSpeed(1.0f + event.getLimbSwingAmount());
+            event.setControllerSpeed(0.75f + event.getLimbSwingAmount() * 0.75f);
         }
         if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
             if (this.isSprinting() || !this.getPassengers().isEmpty()) {
                 event.getController().setAnimation(RUN);
                 if (this.isBaby()) {
-                    event.getController().setAnimationSpeed(1.4D + event.getLimbSwingAmount());
+                    event.getController().setAnimationSpeed(1.05D + event.getLimbSwingAmount() * 0.75D);
                 } else {
-                    event.getController().setAnimationSpeed(1.2D + event.getLimbSwingAmount());
+                    event.getController().setAnimationSpeed(0.9D + event.getLimbSwingAmount() * 0.75D);
                 }
             } else {
                 event.getController().setAnimation(WALK);
+                event.getController().setAnimationSpeed(0.75D);
             }
         } else {
             event.getController().setAnimation(IDLE);
+            event.getController().setAnimationSpeed(0.75D);
         }
         return PlayState.CONTINUE;
     }

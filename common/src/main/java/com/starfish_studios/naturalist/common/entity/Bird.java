@@ -330,9 +330,11 @@ public class Bird extends ShoulderRidingEntity implements FlyingAnimal, Naturali
     protected <E extends Bird> @NotNull PlayState predicate(final @NotNull AnimationState<E> event) {
         if (this.isInSittingPose()) {
             event.getController().setAnimation(SIT);
+            event.getController().setAnimationSpeed(0.75D);
             return PlayState.CONTINUE;
         } else if (this.isFlying()) {
             event.getController().setAnimation(FLY);
+            event.getController().setAnimationSpeed(0.75D);
             return PlayState.CONTINUE;
         } /* else if (this.isPecking()) {
             event.getController().setAnimation(new AnimationBuilder().loop("bird.peck"));
@@ -340,6 +342,7 @@ public class Bird extends ShoulderRidingEntity implements FlyingAnimal, Naturali
         */
         else {
             event.getController().setAnimation(IDLE);
+            event.getController().setAnimationSpeed(0.75D);
             return PlayState.CONTINUE;
         }
     }

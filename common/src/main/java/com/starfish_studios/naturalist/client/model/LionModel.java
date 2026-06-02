@@ -61,8 +61,8 @@ public class LionModel extends GeoModel<Lion> {
         mane.setHidden(!entity.hasMane() || entity.isBaby());
 
         if (!entity.isSleeping()) {
-            head.setRotX(extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
-            head.setRotY(extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
+            head.setRotX(-extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
+            head.setRotY(-extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
         }
     }
 }

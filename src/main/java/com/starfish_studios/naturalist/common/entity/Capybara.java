@@ -27,11 +27,11 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 public class Capybara extends NaturalistAnimal implements NaturalistGeoEntity {
@@ -64,13 +64,13 @@ public class Capybara extends NaturalistAnimal implements NaturalistGeoEntity {
     public static AttributeSupplier.@NotNull Builder createAttributes() {
         return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 10.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.2D);
+                .add(Attributes.TEMPT_RANGE, 10).add(Attributes.MOVEMENT_SPEED, 0.2D);
     }
 
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob mob) {
-        return NaturalistEntityTypes.CAPYBARA.get().create(level);
+        return NaturalistEntityTypes.CAPYBARA.get().create(level, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Override
@@ -126,19 +126,19 @@ public class Capybara extends NaturalistAnimal implements NaturalistGeoEntity {
         return this.geoCache;
     }
 
-    protected <E extends Capybara> PlayState predicate(final @NotNull AnimationState<E> event) {
+    protected PlayState predicate(final @NotNull AnimationTest<Capybara> event) {
         if (this.isInWater()) {
-            event.getController().setAnimation(SWIM);
+            event.setAnimation(SWIM);
         } else if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
-            event.getController().setAnimation(WALK);
+            event.setAnimation(WALK);
         } else {
-            event.getController().setAnimation(IDLE);
+            event.setAnimation(IDLE);
         }
         return PlayState.CONTINUE;
     }
 
     @Override
     public void registerControllers(final AnimatableManager.@NotNull ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 5, this::predicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(0.75).setSoundKeyframeHandler(event -> {}));
     }
 }

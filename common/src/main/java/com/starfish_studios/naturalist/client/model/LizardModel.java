@@ -54,8 +54,8 @@ public class LizardModel extends GeoModel<Lizard> {
         CoreGeoBone beardieBody = this.getAnimationProcessor().getBone("beardie_body");
         CoreGeoBone gecko = this.getAnimationProcessor().getBone("gecko");
 
-        head.setRotX(extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
-        head.setRotY(extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
+        head.setRotX(-extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
+        head.setRotY(-extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
 
         tail.setHidden(!entity.hasTail());
     }

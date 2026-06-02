@@ -64,10 +64,10 @@ public class SnailModel extends GeoModel<Snail> {
         }
 
         if (!animatable.isClimbing() || !animatable.canHide()) {
-            leftEye.setRotX(extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
-            leftEye.setRotY(extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
-            rightEye.setRotX(extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
-            rightEye.setRotY(extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
+            leftEye.setRotX(-extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
+            leftEye.setRotY(-extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
+            rightEye.setRotX(-extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
+            rightEye.setRotY(-extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
         }
     }
 }

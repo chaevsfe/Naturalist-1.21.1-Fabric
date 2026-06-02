@@ -39,11 +39,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import com.starfish_studios.naturalist.common.entity.core.NaturalistGeoEntity;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 public class Firefly extends NaturalistAnimal implements FlyingAnimal, NaturalistGeoEntity {
@@ -80,12 +80,11 @@ public class Firefly extends NaturalistAnimal implements FlyingAnimal, Naturalis
         };
         navigation.setCanOpenDoors(false);
         navigation.setCanFloat(false);
-        navigation.setCanPassDoors(true);
         return navigation;
     }
 
     @Override
-    public boolean causeFallDamage(float pFallDistance, float pMultiplier, DamageSource pSource) {
+    public boolean causeFallDamage(double pFallDistance, float pMultiplier, DamageSource pSource) {
         return false;
     }
 
@@ -105,7 +104,7 @@ public class Firefly extends NaturalistAnimal implements FlyingAnimal, Naturalis
         return Mob.createMobAttributes().add(Attributes.MAX_HEALTH, 6.0D).add(Attributes.FLYING_SPEED, 0.6F).add(Attributes.MOVEMENT_SPEED, 0.3F);
     }
 
-    public static boolean checkFireflySpawnRules(EntityType<? extends Firefly> pType, ServerLevelAccessor pLevel, MobSpawnType pReason, BlockPos pPos, RandomSource pRandom) {
+    public static boolean checkFireflySpawnRules(EntityType<? extends Firefly> pType, ServerLevelAccessor pLevel, EntitySpawnReason pReason, BlockPos pPos, RandomSource pRandom) {
         return Monster.isDarkEnoughToSpawn(pLevel, pPos, pRandom) && pLevel.getBlockState(pPos.below()).is(NaturalistTags.BlockTags.FIREFLIES_SPAWNABLE_ON);
     }
 
@@ -163,7 +162,7 @@ public class Firefly extends NaturalistAnimal implements FlyingAnimal, Naturalis
             this.setSunTicks(this.getSunTicks() + 1);
             if (this.getSunTicks() > 600) {
                 BlockPos pos = this.blockPosition();
-                if (!level().isClientSide) {
+                if (!level().isClientSide()) {
                     for(int i = 0; i < 20; ++i) {
                         double x = random.nextGaussian() * 0.02D;
                         double y = random.nextGaussian() * 0.02D;
@@ -178,15 +177,14 @@ public class Firefly extends NaturalistAnimal implements FlyingAnimal, Naturalis
     }
 
     private boolean canGlow() {
-        if (!this.level().isClientSide) {
-            return this.level().isNight() || this.level().getMaxLocalRawBrightness(this.blockPosition()) < 8;
+        if (!this.level().isClientSide()) {
+            return this.level().isDarkOutside() || this.level().getMaxLocalRawBrightness(this.blockPosition()) < 8;
         }
         return false;
     }
 
-    @Override
-    protected boolean isSunBurnTick() {
-        if (this.level().isDay() && !this.hasCustomName() && !this.level().isClientSide) {
+    public boolean isSunBurnTick() {
+        if (this.level().isBrightOutside() && !this.hasCustomName() && !this.level().isClientSide()) {
             return this.getLightLevelDependentMagicValue() > 0.5F;
         }
 
@@ -221,23 +219,18 @@ public class Firefly extends NaturalistAnimal implements FlyingAnimal, Naturalis
     }
 
     // region GECKOLIB
-    @Override
-    public double getBoneResetTime() {
-        return 2;
-    }
-
     public AnimatableInstanceCache getAnimatableInstanceCache() {
         return this.geoCache;
     }
 
-    private <E extends Firefly> PlayState predicate(final AnimationState<E> event) {
-        event.getController().setAnimation(FLY);
+    private PlayState predicate(final AnimationTest<Firefly> event) {
+        event.setAnimation(FLY);
         return PlayState.CONTINUE;
     }
 
     @Override
     public void registerControllers(final AnimatableManager.@NotNull ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 2, this::predicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 2, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
     }
     // endregion
 
@@ -265,7 +258,7 @@ public class Firefly extends NaturalistAnimal implements FlyingAnimal, Naturalis
             super.tick();
             Level level = firefly.level();
             if (this.isReachedTarget()) {
-                if (!level.isClientSide) {
+                if (!level.isClientSide()) {
                     ((ServerLevel)level).sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, Blocks.SHORT_GRASS.defaultBlockState()), firefly.getX(), firefly.getY(), firefly.getZ(), 50, firefly.getBbWidth() / 4.0F, firefly.getBbHeight() / 4.0F, firefly.getBbWidth() / 4.0F, 0.05D);
                 }
                 level.playSound(null, firefly.blockPosition(), NaturalistSoundEvents.FIREFLY_HIDE.get(), SoundSource.NEUTRAL, 0.7F, 0.9F + level.random.nextFloat() * 0.2F);

@@ -7,7 +7,6 @@ import com.starfish_studios.naturalist.common.entity.core.ai.navigation.MMPathNa
 import com.starfish_studios.naturalist.common.entity.core.ai.navigation.SmartBodyHelper;
 import com.starfish_studios.naturalist.core.registry.NaturalistEntityTypes;
 import net.minecraft.core.BlockPos;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -30,14 +29,16 @@ import net.minecraft.world.item.crafting.Ingredient;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
-import software.bernie.geckolib.animation.AnimatableManager;
+import software.bernie.geckolib.animatable.manager.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.AnimationState;
+import software.bernie.geckolib.animation.state.AnimationTest;
 import software.bernie.geckolib.animation.RawAnimation;
-import software.bernie.geckolib.animation.PlayState;
+import software.bernie.geckolib.animation.object.PlayState;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 public class FennecFox extends NaturalistAnimal implements NaturalistGeoEntity {
@@ -73,13 +74,13 @@ public class FennecFox extends NaturalistAnimal implements NaturalistGeoEntity {
     public static AttributeSupplier.@NotNull Builder createAttributes() {
         return Mob.createMobAttributes()
                 .add(Attributes.MAX_HEALTH, 8.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.3D);
+                .add(Attributes.TEMPT_RANGE, 10).add(Attributes.MOVEMENT_SPEED, 0.3D);
     }
 
     @Nullable
     @Override
     public AgeableMob getBreedOffspring(ServerLevel level, AgeableMob mob) {
-        return NaturalistEntityTypes.FENNEC_FOX.get().create(level);
+        return NaturalistEntityTypes.FENNEC_FOX.get().create(level, net.minecraft.world.entity.EntitySpawnReason.BREEDING);
     }
 
     @Override
@@ -104,20 +105,20 @@ public class FennecFox extends NaturalistAnimal implements NaturalistGeoEntity {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag compound) {
-        super.addAdditionalSaveData(compound);
-        compound.putInt("Variant", this.getVariant());
+    protected void addAdditionalSaveData(ValueOutput view) {
+        super.addAdditionalSaveData(view);
+        view.putInt("Variant", this.getVariant());
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag compound) {
-        super.readAdditionalSaveData(compound);
-        this.setVariant(compound.getInt("Variant"));
+    protected void readAdditionalSaveData(ValueInput view) {
+        super.readAdditionalSaveData(view);
+        this.setVariant(view.getIntOr("Variant", 0));
     }
 
     @Override
     @Nullable
-    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType reason, @Nullable SpawnGroupData spawnData) {
+    public SpawnGroupData finalizeSpawn(ServerLevelAccessor level, DifficultyInstance difficulty, EntitySpawnReason reason, @Nullable SpawnGroupData spawnData) {
         this.setVariant(this.random.nextInt(VARIANT_NAMES.length));
         return super.finalizeSpawn(level, difficulty, reason, spawnData);
     }
@@ -166,8 +167,8 @@ public class FennecFox extends NaturalistAnimal implements NaturalistGeoEntity {
     // MOVEMENT
 
     @Override
-    public void customServerAiStep() {
-        super.customServerAiStep();
+    protected void customServerAiStep(ServerLevel serverLevel) {
+        super.customServerAiStep(serverLevel);
         this.setSprinting(this.getMoveControl().hasWanted() &&
                 this.getMoveControl().getSpeedModifier() >= 1.5D);
     }
@@ -184,24 +185,25 @@ public class FennecFox extends NaturalistAnimal implements NaturalistGeoEntity {
         return this.geoCache;
     }
 
-    protected <E extends FennecFox> PlayState predicate(final @NotNull AnimationState<E> event) {
+    protected PlayState predicate(final @NotNull AnimationTest<FennecFox> event) {
         if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
+            double velScale = Math.max(0.1, this.getDeltaMovement().horizontalDistance() * 3.0);
             if (this.isSprinting()) {
-                event.getController().setAnimation(RUN);
-                event.getController().setAnimationSpeed(2.0D);
+                event.controller().setAnimation(RUN);
+                event.controller().setAnimationSpeed(1.0D * velScale);
             } else {
-                event.getController().setAnimation(WALK);
-                event.getController().setAnimationSpeed(1.0D);
+                event.controller().setAnimation(WALK);
+                event.controller().setAnimationSpeed(0.5D * velScale);
             }
         } else {
-            event.getController().setAnimation(IDLE);
-            event.getController().setAnimationSpeed(1.0D);
+            event.controller().setAnimation(IDLE);
+            event.controller().setAnimationSpeed(0.5D);
         }
         return PlayState.CONTINUE;
     }
 
     @Override
     public void registerControllers(final AnimatableManager.@NotNull ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>(this, "controller", 5, this::predicate).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
     }
 }

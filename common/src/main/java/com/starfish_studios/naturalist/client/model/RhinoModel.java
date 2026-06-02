@@ -69,7 +69,7 @@ public class RhinoModel extends GeoModel<Rhino> {
         }
 
         if (!entity.isSprinting()) {
-            head.setRotY(extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
+            head.setRotY(-extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
         }
 
         bigHorn.setHidden(entity.isBaby());

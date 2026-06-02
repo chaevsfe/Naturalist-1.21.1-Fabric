@@ -64,7 +64,7 @@ public class ElephantModel extends GeoModel<Elephant> {
             babyTrunk.setHidden(false);
         }
 
-        head.setRotX(extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
-        head.setRotY(extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
+        head.setRotX(-extraDataOfType.headPitch() * Mth.DEG_TO_RAD);
+        head.setRotY(-extraDataOfType.netHeadYaw() * Mth.DEG_TO_RAD);
     }
 }

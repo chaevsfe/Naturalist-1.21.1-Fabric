@@ -226,21 +226,21 @@ public class Duck extends NaturalistAnimal implements NaturalistGeoEntity {
     protected <E extends Duck> PlayState predicate(final AnimationState<E> event) {
         if (this.isInWater()) {
             event.getController().setAnimation(SWIM);
-            event.getController().setAnimationSpeed(1.0D);
+            event.getController().setAnimationSpeed(0.75D);
             return PlayState.CONTINUE;
         } else if (this.getDeltaMovement().horizontalDistanceSqr() > 1.0E-6) {
              if (this.isSprinting()) {
                 event.getController().setAnimation(WALK);
-                event.getController().setAnimationSpeed(2.0D);
+                event.getController().setAnimationSpeed(1.5D);
                 return PlayState.CONTINUE;
             } else {
                 event.getController().setAnimation(WALK);
-                event.getController().setAnimationSpeed(1.5D);
+                event.getController().setAnimationSpeed(1.1D);
                 return PlayState.CONTINUE;
             }
         } else {
             event.getController().setAnimation(IDLE);
-            event.getController().setAnimationSpeed(1.0D);
+            event.getController().setAnimationSpeed(0.75D);
         }
         return PlayState.CONTINUE;
     }
@@ -248,7 +248,7 @@ public class Duck extends NaturalistAnimal implements NaturalistGeoEntity {
     protected <E extends Duck> PlayState flapPredicate(final AnimationState<E> event) {
         if (!this.onGround() && !this.isInWater()) {
             event.getController().setAnimation(FLAP);
-            event.getController().setAnimationSpeed(1.0D);
+            event.getController().setAnimationSpeed(0.75D);
             return PlayState.CONTINUE;
         }
         event.getController().forceAnimationReset();

@@ -62,7 +62,8 @@ public class GlowGoopBlock extends Block implements SimpleWaterloggedBlock {
     }
 
     @Override
-    public @NotNull ItemStack getCloneItemStack(net.minecraft.world.level.LevelReader level, BlockPos pos, BlockState state) {
+    public @NotNull ItemStack getCloneItemStack(net.minecraft.world.level.LevelReader level, BlockPos pos, BlockState state, boolean includeData) {
+        if (NaturalistRegistry.GLOW_GOOP == null) return ItemStack.EMPTY;
         return NaturalistRegistry.GLOW_GOOP.get().asItem().getDefaultInstance();
     }
 
@@ -124,6 +125,7 @@ public class GlowGoopBlock extends Block implements SimpleWaterloggedBlock {
     }
 
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
+        if (NaturalistRegistry.GLOW_GOOP == null) return Shapes.empty();
         return context.isHoldingItem(NaturalistRegistry.GLOW_GOOP.get()) ? Shapes.block() : Shapes.empty();
     }
 
