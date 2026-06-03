@@ -96,7 +96,7 @@ public class LizardTail extends Mob implements NaturalistGeoEntity {
 
     @Override
     public void registerControllers(final AnimatableManager.@NotNull ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>("controller", 0, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 0, this::predicate).setAnimationSpeed(0.225).setSoundKeyframeHandler(event -> {}));
     }
 
 }

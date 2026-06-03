@@ -513,7 +513,7 @@ public class Mammoth extends NaturalistAnimal implements NeutralMob, NaturalistG
     @Override
     public void registerControllers(final AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
-        controllers.add(new AnimationController<>("swingController", 0, this::swingPredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("swingController", 0, this::swingPredicate).setAnimationSpeed(0.225).setSoundKeyframeHandler(event -> {}));
     }
 
     // endregion

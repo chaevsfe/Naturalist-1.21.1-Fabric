@@ -197,7 +197,7 @@ public class FennecFox extends NaturalistAnimal implements NaturalistGeoEntity {
             }
         } else {
             event.controller().setAnimation(IDLE);
-            event.controller().setAnimationSpeed(0.5D);
+            event.controller().setAnimationSpeed(0.225D);
         }
         return PlayState.CONTINUE;
     }

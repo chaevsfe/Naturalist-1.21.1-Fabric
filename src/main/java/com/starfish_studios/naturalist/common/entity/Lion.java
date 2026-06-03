@@ -288,7 +288,7 @@ public class Lion extends NaturalistAnimal implements NaturalistGeoEntity, Sleep
                 }
             }
         }));
-        controllers.add(new AnimationController<>("attackController", 0, this::attackPredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("attackController", 0, this::attackPredicate).setAnimationSpeed(0.225).setSoundKeyframeHandler(event -> {}));
     }
 
 

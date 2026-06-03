@@ -317,7 +317,7 @@ public class Rhino extends NaturalistAnimal implements NaturalistGeoEntity {
         AnimationController<Rhino> controller = new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0);
         controller.setSoundKeyframeHandler(this::soundListener);
         controllers.add(controller);
-        controllers.add(new AnimationController<>("attackController", 5, this::attackPredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("attackController", 5, this::attackPredicate).setAnimationSpeed(0.225).setSoundKeyframeHandler(event -> {}));
     }
 
 

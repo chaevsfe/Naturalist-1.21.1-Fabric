@@ -139,6 +139,6 @@ public class Capybara extends NaturalistAnimal implements NaturalistGeoEntity {
 
     @Override
     public void registerControllers(final AnimatableManager.@NotNull ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(0.75).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(0.225).setSoundKeyframeHandler(event -> {}));
     }
 }

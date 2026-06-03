@@ -549,7 +549,7 @@ public class Bear extends NaturalistAnimal implements NeutralMob, NaturalistGeoE
     public void registerControllers(final AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
         controllers.add(new AnimationController<>("sniffController", 0, this::sniffPredicate).setAnimationSpeed(0.225).setSoundKeyframeHandler(event -> {}));
-        controllers.add(new AnimationController<>("swingController", 2, this::attackPredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("swingController", 2, this::attackPredicate).setAnimationSpeed(0.225).setSoundKeyframeHandler(event -> {}));
         controllers.add(new AnimationController<>("eatController", 0, this::eatPredicate).setAnimationSpeed(0.225).setSoundKeyframeHandler(event -> {}));
     }
 

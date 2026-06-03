@@ -265,7 +265,7 @@ public class Hippo extends NaturalistAnimal implements NaturalistGeoEntity {
     @Override
     public void registerControllers(final AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
-        controllers.add(new AnimationController<>("attackController", 0, this::attackPredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("attackController", 0, this::attackPredicate).setAnimationSpeed(0.225).setSoundKeyframeHandler(event -> {}));
     }
 
 

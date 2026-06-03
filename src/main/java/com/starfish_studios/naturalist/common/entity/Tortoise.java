@@ -340,8 +340,8 @@ public class Tortoise extends TamableAnimal implements NaturalistGeoEntity, Hidi
     @Override
     public void registerControllers(final AnimatableManager.@NotNull ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(this::soundListener));
-        controllers.add(new AnimationController<>("hurtController", 5, this::hurtPredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(this::soundListener));
-        controllers.add(new AnimationController<>("hideController", 0, this::hidePredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(this::soundListener));
+        controllers.add(new AnimationController<>("hurtController", 5, this::hurtPredicate).setAnimationSpeed(0.225).setSoundKeyframeHandler(this::soundListener));
+        controllers.add(new AnimationController<>("hideController", 0, this::hidePredicate).setAnimationSpeed(0.225).setSoundKeyframeHandler(this::soundListener));
     }
 
     private void soundListener(KeyFrameEvent<Tortoise, SoundKeyframeData> event) {

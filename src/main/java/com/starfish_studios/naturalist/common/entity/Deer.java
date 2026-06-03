@@ -239,6 +239,6 @@ public class Deer extends NaturalistAnimal implements NaturalistGeoEntity {
     public void registerControllers(final AnimatableManager.@NotNull ControllerRegistrar controllers) {
         // data.setResetSpeedInTicks(10);
         controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
-        controllers.add(new AnimationController<>("eat_controller", 5, this::eatPredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("eat_controller", 5, this::eatPredicate).setAnimationSpeed(0.225).setSoundKeyframeHandler(event -> {}));
     }
 }

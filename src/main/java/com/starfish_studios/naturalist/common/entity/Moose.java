@@ -333,7 +333,7 @@ public class Moose extends NaturalistAnimal implements NeutralMob, NaturalistGeo
     @Override
     public void registerControllers(final AnimatableManager.ControllerRegistrar controllers) {
         controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
-        controllers.add(new AnimationController<>("swingController", 2, this::attackPredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("swingController", 2, this::attackPredicate).setAnimationSpeed(0.225).setSoundKeyframeHandler(event -> {}));
     }
 
     // endregion

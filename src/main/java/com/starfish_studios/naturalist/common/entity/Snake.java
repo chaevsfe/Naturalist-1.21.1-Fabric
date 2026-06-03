@@ -473,13 +473,13 @@ public class Snake extends ClimbingAnimal implements SleepingAnimal, NeutralMob,
 
     @Override
     public void registerControllers(final AnimatableManager.ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>("controller", 10, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(this::soundListener));
-        controllers.add(new AnimationController<>("attackController", 0, this::attackPredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("controller", 10, this::predicate).setAnimationSpeed(0.225).setSoundKeyframeHandler(this::soundListener));
+        controllers.add(new AnimationController<>("attackController", 0, this::attackPredicate).setAnimationSpeed(0.225).setSoundKeyframeHandler(event -> {}));
 
-        AnimationController<Snake> tongueController = new AnimationController<>("tongueController", 0, this::tonguePredicate).setAnimationSpeed(1.0);
+        AnimationController<Snake> tongueController = new AnimationController<>("tongueController", 0, this::tonguePredicate).setAnimationSpeed(0.225);
         tongueController.setSoundKeyframeHandler(this::soundListener);
         controllers.add(tongueController);
-        controllers.add(new AnimationController<>("rattleController", 0, this::rattlePredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(event -> {}));
+        controllers.add(new AnimationController<>("rattleController", 0, this::rattlePredicate).setAnimationSpeed(0.225).setSoundKeyframeHandler(event -> {}));
     }
 
 

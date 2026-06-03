@@ -433,8 +433,8 @@ public class Snail extends ClimbingAnimal implements NaturalistGeoEntity, Bucket
 
     @Override
     public void registerControllers(final AnimatableManager.@NotNull ControllerRegistrar controllers) {
-        controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(this::soundListener));
-        controllers.add(new AnimationController<>("hideController", 0, this::hidePredicate).setAnimationSpeed(1.0).setSoundKeyframeHandler(this::soundListener));
+        controllers.add(new AnimationController<>("controller", 5, this::predicate).setAnimationSpeed(0.225).setSoundKeyframeHandler(this::soundListener));
+        controllers.add(new AnimationController<>("hideController", 0, this::hidePredicate).setAnimationSpeed(0.225).setSoundKeyframeHandler(this::soundListener));
     }
 
 
