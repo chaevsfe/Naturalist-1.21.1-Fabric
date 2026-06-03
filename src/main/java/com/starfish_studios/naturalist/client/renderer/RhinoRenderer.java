@@ -65,7 +65,7 @@ public class RhinoRenderer<R extends LivingEntityRenderState & GeoRenderState> e
         if (sprinting == null || !sprinting) {
             float yaw = renderPassInfo.getOrDefaultGeckolibData(DataTickets.ENTITY_YAW, 0f);
             float netHeadYaw = yaw;
-            boneSnapshots.ifPresent("head", snapshot -> snapshot.setRotY(netHeadYaw * Mth.DEG_TO_RAD));
+            boneSnapshots.ifPresent("head", snapshot -> snapshot.setRotY(-netHeadYaw * Mth.DEG_TO_RAD));
         }
     }
 }

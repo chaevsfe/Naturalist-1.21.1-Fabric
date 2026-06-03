@@ -75,12 +75,12 @@ public class SnailRenderer<R extends LivingEntityRenderState & GeoRenderState> e
             float yaw = renderPassInfo.getOrDefaultGeckolibData(DataTickets.ENTITY_YAW, 0f);
             float netHeadYaw = yaw;
             boneSnapshots.ifPresent("left_eye", snapshot -> {
-                snapshot.setRotX(pitch * Mth.DEG_TO_RAD);
-                snapshot.setRotY(netHeadYaw * Mth.DEG_TO_RAD);
+                snapshot.setRotX(-pitch * Mth.DEG_TO_RAD);
+                snapshot.setRotY(-netHeadYaw * Mth.DEG_TO_RAD);
             });
             boneSnapshots.ifPresent("right_eye", snapshot -> {
-                snapshot.setRotX(pitch * Mth.DEG_TO_RAD);
-                snapshot.setRotY(netHeadYaw * Mth.DEG_TO_RAD);
+                snapshot.setRotX(-pitch * Mth.DEG_TO_RAD);
+                snapshot.setRotY(-netHeadYaw * Mth.DEG_TO_RAD);
             });
         }
     }

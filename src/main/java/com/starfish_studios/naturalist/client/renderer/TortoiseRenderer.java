@@ -60,8 +60,8 @@ public class TortoiseRenderer<R extends LivingEntityRenderState & GeoRenderState
         float yaw = renderPassInfo.getOrDefaultGeckolibData(DataTickets.ENTITY_YAW, 0f);
         float netHeadYaw = yaw;
         boneSnapshots.ifPresent("head", snapshot -> {
-            snapshot.setRotX(pitch * Mth.DEG_TO_RAD);
-            snapshot.setRotY(netHeadYaw * Mth.DEG_TO_RAD);
+            snapshot.setRotX(-pitch * Mth.DEG_TO_RAD);
+            snapshot.setRotY(-netHeadYaw * Mth.DEG_TO_RAD);
         });
     }
 }

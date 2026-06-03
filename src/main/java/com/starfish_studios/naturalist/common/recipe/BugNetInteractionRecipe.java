@@ -44,12 +44,12 @@ public record BugNetInteractionRecipe(EntityType<?> entityType, ItemStack dropSt
     }
 
     @Override
-    public @NotNull RecipeSerializer<?> getSerializer() {
+    public @NotNull RecipeSerializer<? extends Recipe<RecipeInput>> getSerializer() {
         return NaturalistRecipes.BUG_NET_SERIALIZER;
     }
 
     @Override
-    public @NotNull RecipeType<?> getType() {
+    public @NotNull RecipeType<? extends Recipe<RecipeInput>> getType() {
         return NaturalistRecipes.BUG_NET;
     }
 
@@ -76,11 +76,11 @@ public record BugNetInteractionRecipe(EntityType<?> entityType, ItemStack dropSt
         public static final StreamCodec<RegistryFriendlyByteBuf, BugNetInteractionRecipe> STREAM_CODEC =
             StreamCodec.of(
                 (buf, recipe) -> {
-                    buf.writeResourceLocation(BuiltInRegistries.ENTITY_TYPE.getKey(recipe.entityType()));
+                    buf.writeIdentifier(BuiltInRegistries.ENTITY_TYPE.getKey(recipe.entityType()));
                     ItemStack.STREAM_CODEC.encode(buf, recipe.dropStack());
                 },
                 buf -> {
-                    EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.get(buf.readResourceLocation());
+                    EntityType<?> entityType = BuiltInRegistries.ENTITY_TYPE.getValue(buf.readIdentifier());
                     ItemStack dropStack = ItemStack.STREAM_CODEC.decode(buf);
                     return new BugNetInteractionRecipe(entityType, dropStack);
                 }
